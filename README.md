@@ -193,10 +193,9 @@ npm run build
 
 ## License
 
-This project is licensed under the **PolyForm Noncommercial License 1.0.0**.
+This project is licensed under the [Apache License 2.0](LICENSE).
 
 You are free to use LLMask for **non-commercial purposes** (personal projects, research, evaluation).  
-Commercial use requires a separate license. Contact us at [your-email@example.com].
 
 See [LICENSE](./LICENSE) for details.
 
