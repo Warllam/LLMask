@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  llmask:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: llmask:latest
+    container_name: llmask
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8787}:8787"
+    env_file:
+      - .env
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8787"
+      DATA_DIR: /app/data
+      SQLITE_PATH: /app/data/llmask.db
+    volumes:
+      - llmask-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8787/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
+volumes:
+  llmask-data:
+    name: llmask-data
