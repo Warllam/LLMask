@@ -9,7 +9,7 @@ import {
   isClaudeCliAvailable,
   spawnClaudeLogin,
   triggerClaudeTokenRefresh
-} from "../../src/shared/anthropic-claude-oauth";
+} from "../src/shared/anthropic-claude-oauth";
 
 vi.mock("node:fs");
 vi.mock("node:os");

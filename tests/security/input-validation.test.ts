@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeString, sanitizeBody, createChatCompletionSchema } from "../../../src/modules/security/input-validation";
+import { sanitizeString, sanitizeBody, createChatCompletionSchema } from "../../src/modules/security/input-validation";
 
 describe("sanitizeString", () => {
   it("removes null bytes", () => {

@@ -6,7 +6,7 @@ import {
   needsAuth,
   type ApiKeyEntry,
   type ApiAuthConfig,
-} from "../../../src/modules/security/api-auth";
+} from "../../src/modules/security/api-auth";
 
 describe("hashApiKey", () => {
   it("produces consistent SHA-256 hex output", () => {

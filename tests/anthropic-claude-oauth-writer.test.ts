@@ -5,7 +5,7 @@ import {
   writeClaudeKeychainCredentials,
   writeClaudeFileCredentials,
   writeClaudeCredentials
-} from "../../src/shared/anthropic-claude-oauth-writer";
+} from "../src/shared/anthropic-claude-oauth-writer";
 
 vi.mock("node:fs");
 vi.mock("node:child_process");

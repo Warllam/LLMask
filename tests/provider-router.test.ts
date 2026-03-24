@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Transform } from "node:stream";
-import { ProviderRouter } from "../../src/modules/provider-adapter/provider-router";
-import type { ProviderAdapter, EndpointKind } from "../../src/modules/provider-adapter/types";
+import { ProviderRouter } from "../src/modules/provider-adapter/provider-router";
+import type { ProviderAdapter, EndpointKind } from "../src/modules/provider-adapter/types";
 
 function createMockAdapter(
   type: "openai" | "anthropic" | "litellm" | "gemini" | "mistral",

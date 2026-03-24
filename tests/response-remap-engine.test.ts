@@ -3,8 +3,8 @@ import { Transform } from "node:stream";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { ResponseRemapEngine } from "../../src/modules/remap/response-remap-engine";
-import { SqliteMappingStore } from "../../src/modules/mapping-store/sqlite-mapping-store";
+import { ResponseRemapEngine } from "../src/modules/remap/response-remap-engine";
+import { SqliteMappingStore } from "../src/modules/mapping-store/sqlite-mapping-store";
 
 function collectStream(transform: Transform, chunks: string[]): Promise<string> {
   return new Promise((resolve, reject) => {

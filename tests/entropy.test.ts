@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { shannonEntropy } from "../../src/modules/detection/entropy";
+import { shannonEntropy } from "../src/modules/detection/entropy";
 
 describe("shannonEntropy", () => {
   it("returns 0 for empty string", () => {

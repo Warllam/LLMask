@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { LlmEntityExtractor } from "../../src/modules/llm-extractor/llm-entity-extractor";
-import { EntityCache } from "../../src/modules/llm-extractor/entity-cache";
+import { LlmEntityExtractor } from "../src/modules/llm-extractor/llm-entity-extractor";
+import { EntityCache } from "../src/modules/llm-extractor/entity-cache";
 
 describe("LlmEntityExtractor", () => {
   const baseConfig = {

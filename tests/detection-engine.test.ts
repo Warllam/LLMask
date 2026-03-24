@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DetectionEngine } from "../../src/modules/detection/detection-engine";
+import { DetectionEngine } from "../src/modules/detection/detection-engine";
 
 describe("DetectionEngine", () => {
   const engine = new DetectionEngine();

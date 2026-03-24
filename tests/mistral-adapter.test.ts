@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { MistralAdapter } from "../../src/modules/provider-adapter/mistral-adapter";
+import { MistralAdapter } from "../src/modules/provider-adapter/mistral-adapter";
 
 describe("MistralAdapter", () => {
   const adapter = new MistralAdapter({

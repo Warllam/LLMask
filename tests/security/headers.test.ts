@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildCsp, applySecurityHeaders } from "../../../src/modules/security/headers";
+import { buildCsp, applySecurityHeaders } from "../../src/modules/security/headers";
 
 describe("buildCsp", () => {
   it("joins directives", () => {

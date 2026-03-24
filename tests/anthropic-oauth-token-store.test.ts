@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { AnthropicOAuthTokenStore } from "../../src/modules/provider-adapter/anthropic-oauth-token-store";
-import * as oauth from "../../src/shared/anthropic-claude-oauth";
-import * as writer from "../../src/shared/anthropic-claude-oauth-writer";
+import { AnthropicOAuthTokenStore } from "../src/modules/provider-adapter/anthropic-oauth-token-store";
+import * as oauth from "../src/shared/anthropic-claude-oauth";
+import * as writer from "../src/shared/anthropic-claude-oauth-writer";
 
-vi.mock("../../src/shared/anthropic-claude-oauth");
-vi.mock("../../src/shared/anthropic-claude-oauth-writer");
+vi.mock("../src/shared/anthropic-claude-oauth");
+vi.mock("../src/shared/anthropic-claude-oauth-writer");
 
 describe("AnthropicOAuthTokenStore", () => {
   const mockFilePath = "/home/test/.claude/.credentials.json";

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getTraceId } from "../../src/shared/trace-id";
+import { getTraceId } from "../src/shared/trace-id";
 
 function mockRequest(overrides: {
   headers?: Record<string, string | string[] | undefined>;

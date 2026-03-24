@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { loadConfig } from "../../src/shared/config";
+import { loadConfig } from "../src/shared/config";
 
 function baseEnv(): Record<string, string> {
   return {
