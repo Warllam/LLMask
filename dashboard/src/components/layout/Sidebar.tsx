@@ -3,7 +3,6 @@ import {
   Search,
   Shield,
   MessageSquare,
-  BarChart3,
   Sun,
   Moon,
   PanelLeftClose,
