@@ -3,15 +3,9 @@ import multipart from "@fastify/multipart";
 import { randomUUID } from "node:crypto";
 import { buildModules } from "./app/modules";
 import { registerDashboardRoutes } from "./modules/dashboard/dashboard-routes";
-import { registerEnterprise, type EnterpriseServices } from "./enterprise/index";
 import type { AppConfig } from "./shared/config";
 import { stripImageMetadata, describeImageMetadata } from "./shared/image-sanitizer";
 import { extractText, isSupportedFile, isTextFile, isDocumentFile, isImageFile } from "./shared/file-extractors";
-import { validateLicense, type Tier } from "./licensing/license";
-import { createTierGuard } from "./licensing/tier-guard";
-import { AlertStore } from "./modules/alerts/alert-store";
-import { AlertManager, type AlertManagerConfig } from "./modules/alerts/alert-manager";
-import { RateLimiter } from "./modules/auth/rate-limiter";
 import { 
   parseSecurityConfig, 
   registerSecurityMiddleware, 
@@ -29,13 +23,6 @@ import {
   decrementActiveSessions,
   recordHttpRequest,
 } from "./shared/metrics";
-
-// Extend Fastify request to carry tenant info
-declare module "fastify" {
-  interface FastifyRequest {
-    tenant?: import("./modules/auth/auth-service").Tenant;
-  }
-}
 
 export function buildServer(config: AppConfig): FastifyInstance {
   const securityConf = parseSecurityConfig(process.env);
@@ -69,26 +56,7 @@ export function buildServer(config: AppConfig): FastifyInstance {
     }
   });
 
-  // ── License & tier resolution ──────────────────────────────────────
-  const licenseInfo = validateLicense({
-    licenseKey: config.licenseKey || undefined,
-    licenseFile: config.licenseFile || undefined,
-  });
-
-  // License key overrides config edition; if no license, use config edition
-  const tier: Tier = licenseInfo.valid && licenseInfo.tier !== "community"
-    ? licenseInfo.tier
-    : config.edition === "enterprise" ? "enterprise"
-    : config.edition === "pro" ? "pro"
-    : "community";
-
-  if (licenseInfo.valid && licenseInfo.tier !== "community") {
-    server.log.info({ tier, org: licenseInfo.org, expiresAt: licenseInfo.expiresAt?.toISOString() }, "License validated");
-  } else if (!licenseInfo.valid && licenseInfo.reason) {
-    server.log.warn({ reason: licenseInfo.reason }, "License invalid — running as community");
-  }
-
-  server.log.info({ tier }, `LLMask running as ${tier}`);
+  server.log.info("LLMask running as community (OSS)");
 
   // ── Enhanced Security Middleware ─────────────────────────────────
   const advancedRateLimiter = registerSecurityMiddleware(server, securityConf, server.log);
@@ -124,8 +92,8 @@ export function buildServer(config: AppConfig): FastifyInstance {
   server.get("/health", async () => ({
     status: "ok",
     service: "llmask",
-    tier,
-    edition: tier, // backward compat
+    tier: "community",
+    edition: "community",
     mode: config.llmaskMode,
     primaryProvider: config.primaryProvider,
     fallbackProvider: config.fallbackProvider ?? "none",
@@ -158,83 +126,9 @@ export function buildServer(config: AppConfig): FastifyInstance {
     });
   }
 
-  // ── Tier guard (gates routes by tier) ─────────────────────────────
-  server.addHook("onRequest", createTierGuard(tier));
-
-  // ── Enterprise features (conditional on tier) ─────────────────────
-  let enterprise: EnterpriseServices = { authService: null, rateLimiter: null as any, oidcProvider: null };
-
-  if (tier === "enterprise") {
-    enterprise = registerEnterprise(server, {
-      config,
-      mappingStore: modules.mappingStore,
-      shieldTerms: modules.shieldTerms
-    });
-  } else {
-    server.log.info({ tier }, "Enterprise features disabled");
-  }
-
-  // ── Auth middleware for proxy routes ────────────────────────────────
-  // Works in both editions: enterprise uses full tenant auth,
-  // OSS skips (no auth required)
-  const authMiddleware = async (request: FastifyRequest, reply: FastifyReply) => {
-    if (!enterprise.authService) return; // auth disabled or OSS edition
-
-    // Try API key first (for machines: Copilot, CLI, etc.)
-    const apiKey = extractApiKey(request);
-
-    // If no API key, try JWT/OIDC (for humans: dashboard, SSO)
-    if (!apiKey && enterprise.oidcProvider) {
-      const bearer = extractBearerToken(request);
-      if (bearer) {
-        const oidcResult = await enterprise.oidcProvider.authenticate(bearer);
-        if (oidcResult.ok) {
-          // OIDC user authenticated — map to a tenant or create an implicit one
-          request.tenant = {
-            id: `oidc:${oidcResult.claims.sub}`,
-            name: oidcResult.claims.name || oidcResult.claims.email || oidcResult.claims.sub,
-            apiKey: "",
-            rateLimit: 0,
-            enabled: true,
-            createdAt: new Date().toISOString(),
-          };
-          return;
-        }
-        // OIDC failed — fall through to API key error
-      }
-    }
-
-    if (!apiKey) {
-      return reply.code(401).send({
-        error: { message: "Missing API key. Set the x-llmask-key header or provide a valid JWT.", type: "authentication_error", code: "MISSING_API_KEY" }
-      });
-    }
-
-    const result = enterprise.authService.authenticate(apiKey);
-    if (!result.ok) {
-      return reply.code(401).send({
-        error: { message: result.reason, type: "authentication_error", code: "INVALID_API_KEY" }
-      });
-    }
-
-    // Rate limiting (enterprise only)
-    if (enterprise.rateLimiter) {
-      const { allowed, remaining, resetMs } = enterprise.rateLimiter.check(result.tenant.id, result.tenant.rateLimit);
-      if (!allowed) {
-        reply.header("retry-after", String(Math.ceil(resetMs / 1000)));
-        reply.header("x-ratelimit-limit", String(result.tenant.rateLimit));
-        reply.header("x-ratelimit-remaining", "0");
-        return reply.code(429).send({
-          error: { message: "Rate limit exceeded. Try again later.", type: "rate_limit_error", code: "RATE_LIMITED" }
-        });
-      }
-      if (result.tenant.rateLimit > 0) {
-        reply.header("x-ratelimit-limit", String(result.tenant.rateLimit));
-        reply.header("x-ratelimit-remaining", String(remaining));
-      }
-    }
-
-    request.tenant = result.tenant;
+  // ── Auth middleware (OSS: no-op) ─────────────────────────────────────
+  const authMiddleware = async (_request: FastifyRequest, _reply: FastifyReply) => {
+    // No auth in OSS edition
   };
 
   // ── Proxy routes (core — available in both editions) ───────────────
@@ -375,45 +269,6 @@ export function buildServer(config: AppConfig): FastifyInstance {
     });
   });
 
-  // ── Alerts ───────────────────────────────────────────────────────────
-  const alertStore = new AlertStore(modules.mappingStore.getDb());
-  alertStore.initialize();
-
-  // Parse alert configuration from environment
-  const alertConfig: AlertManagerConfig = {
-    enabled: process.env.ALERTS_ENABLED === "true",
-    channels: (process.env.ALERTS_CHANNELS || "console").split(",").map(c => c.trim()),
-    webhookUrl: process.env.ALERTS_WEBHOOK_URL,
-    webhookHeaders: process.env.ALERTS_WEBHOOK_HEADERS 
-      ? JSON.parse(process.env.ALERTS_WEBHOOK_HEADERS) 
-      : undefined,
-    emailHost: process.env.ALERTS_EMAIL_HOST,
-    emailPort: process.env.ALERTS_EMAIL_PORT ? parseInt(process.env.ALERTS_EMAIL_PORT, 10) : 587,
-    emailSecure: process.env.ALERTS_EMAIL_SECURE === "true",
-    emailUser: process.env.ALERTS_EMAIL_USER,
-    emailPass: process.env.ALERTS_EMAIL_PASS,
-    emailFrom: process.env.ALERTS_EMAIL_FROM,
-    emailTo: process.env.ALERTS_EMAIL_TO,
-    discordWebhook: process.env.ALERTS_DISCORD_WEBHOOK,
-    slackWebhook: process.env.ALERTS_SLACK_WEBHOOK,
-  };
-
-  const alertManager = new AlertManager(
-    alertConfig,
-    alertStore,
-    server.log,
-    {
-      getLeakCount: () => {
-        try { return modules.mappingStore.scanLeaksCached(modules.shieldTerms).requestLeaks; }
-        catch { return 0; }
-      },
-    }
-  );
-
-  // Start alert manager (evaluation every 60s)
-  alertManager.start(60_000);
-  server.addHook("onClose", () => alertManager.stop());
-
   // ── Dashboard (core: session logs & mappings) ──────────────────────
   registerDashboardRoutes(server, {
     mappingStore: modules.mappingStore,
@@ -424,36 +279,12 @@ export function buildServer(config: AppConfig): FastifyInstance {
     requestTimeoutMs: config.requestTimeoutMs,
     shieldTerms: modules.shieldTerms,
     adminKey: config.adminKey,
-    tier,
-    alertStore,
-    alertEngine: alertManager as any, // Backward compatibility
-    onPolicyBlock: () => { alertManager.recordBlock(); },
   });
 
   return server;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
-
-function extractApiKey(request: FastifyRequest): string | undefined {
-  const llmaskKey = request.headers["x-llmask-key"];
-  if (llmaskKey) return Array.isArray(llmaskKey) ? llmaskKey[0] : llmaskKey;
-
-  const auth = request.headers.authorization;
-  if (auth && typeof auth === "string" && auth.startsWith("Bearer llmask_")) {
-    return auth.slice(7);
-  }
-
-  return undefined;
-}
-
-function extractBearerToken(request: FastifyRequest): string | undefined {
-  const auth = request.headers.authorization;
-  if (auth && typeof auth === "string" && auth.startsWith("Bearer ") && !auth.startsWith("Bearer llmask_")) {
-    return auth.slice(7);
-  }
-  return undefined;
-}
 
 function isPrivateRequest(request: FastifyRequest): boolean {
   const xff = request.headers["x-forwarded-for"];

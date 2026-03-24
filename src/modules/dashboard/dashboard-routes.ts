@@ -9,13 +9,7 @@ import type { ResponseRemapEngine } from "../remap/response-remap-engine";
 import type { DetectionEngine } from "../detection/detection-engine";
 import type { ProviderRouter } from "../provider-adapter/provider-router";
 import { buildCliPrompt, spawnClaudeCli } from "../claude-cli/claude-cli-adapter";
-import type { Tier } from "../../licensing/license";
-import { liveBus, type LiveMaskingEvent, type LiveAlertEvent } from "./live-events";
-import type { AlertStore } from "../alerts/alert-store";
-import type { AlertEngine } from "../alerts/alert-engine";
-import type { AlertManager } from "../alerts/alert-manager";
-import type { AlertEventFilter } from "../alerts/alert-types";
-import { getAllTemplates, setCustomTemplate, type AlertTemplate } from "../alerts/alert-templates";
+import { liveBus, type LiveMaskingEvent } from "./live-events";
 
 type ChatDeps = {
   mappingStore: MappingStore;
@@ -26,11 +20,6 @@ type ChatDeps = {
   requestTimeoutMs: number;
   shieldTerms?: string[];
   adminKey?: string;
-  tier?: Tier;
-  alertStore?: AlertStore;
-  alertEngine?: AlertEngine;
-  alertManager?: AlertManager;
-  onPolicyBlock?: () => void;
 };
 
 export function registerDashboardRoutes(
@@ -182,151 +171,11 @@ export function registerDashboardRoutes(
       reply.raw.write(": heartbeat\n\n");
     }, 30_000);
 
-    const onAlert = (event: LiveAlertEvent) => {
-      reply.raw.write(`data: ${JSON.stringify({ ...event, eventType: "alert" })}\n\n`);
-    };
-    liveBus.on("alert", onAlert);
-
     request.raw.on("close", () => {
       liveBus.removeListener("masking", onEvent);
-      liveBus.removeListener("alert", onAlert);
       clearInterval(heartbeat);
     });
   });
-
-  // ---- Alert API (Pro+) ----
-  if (deps.alertStore) {
-    const alertStore = deps.alertStore;
-
-    server.get("/dashboard/api/alerts/rules", async () => {
-      return alertStore.listRules();
-    });
-
-    server.put<{ Body: any }>("/dashboard/api/alerts/rules", async (request) => {
-      const rule = request.body as any;
-      if (!rule?.id || !rule?.name || !rule?.kind) {
-        throw { statusCode: 400, message: "Missing required fields: id, name, kind" };
-      }
-      alertStore.upsertRule({
-        id: rule.id,
-        name: rule.name,
-        kind: rule.kind,
-        enabled: rule.enabled ?? true,
-        severity: rule.severity ?? "warning",
-        threshold: rule.threshold ?? 10,
-        windowMinutes: rule.windowMinutes ?? 60,
-        channels: rule.channels ?? ["dashboard", "log"],
-        cooldownMinutes: rule.cooldownMinutes ?? 30,
-      });
-      return { ok: true };
-    });
-
-    server.delete<{ Params: { id: string } }>("/dashboard/api/alerts/rules/:id", async (request) => {
-      const deleted = alertStore.deleteRule(request.params.id);
-      return { ok: deleted };
-    });
-
-    server.get<{ Querystring: { limit?: string } }>("/dashboard/api/alerts/events", async (request) => {
-      const limit = Math.min(parseInt(request.query.limit ?? "100", 10) || 100, 500);
-      return alertStore.listEvents(limit);
-    });
-
-    server.get("/dashboard/api/alerts/firing", async () => {
-      return alertStore.listFiringEvents();
-    });
-
-    server.post<{ Params: { id: string } }>("/dashboard/api/alerts/events/:id/resolve", async (request) => {
-      alertStore.resolveEvent(parseInt(request.params.id, 10));
-      return { ok: true };
-    });
-
-    // --- Acknowledgement ---
-    server.post<{ Params: { id: string }; Body: { acknowledgedBy?: string } }>(
-      "/dashboard/api/alerts/events/:id/acknowledge",
-      async (request) => {
-        const body = request.body as { acknowledgedBy?: string } | undefined;
-        alertStore.acknowledgeEvent(parseInt(request.params.id, 10), body?.acknowledgedBy);
-        return { ok: true };
-      }
-    );
-
-    server.post<{ Body: { ids: number[]; acknowledgedBy?: string } }>(
-      "/dashboard/api/alerts/events/bulk-acknowledge",
-      async (request) => {
-        const body = request.body as { ids: number[]; acknowledgedBy?: string };
-        if (!Array.isArray(body?.ids)) {
-          throw { statusCode: 400, message: "ids must be an array of event IDs" };
-        }
-        const count = alertStore.bulkAcknowledge(body.ids, body.acknowledgedBy);
-        return { ok: true, acknowledged: count };
-      }
-    );
-
-    // --- Filtered events ---
-    server.get<{ Querystring: Record<string, string> }>(
-      "/dashboard/api/alerts/events/filter",
-      async (request) => {
-        const q = request.query;
-        const filter: AlertEventFilter = {
-          severity: q.severity as any,
-          status: q.status as any,
-          ruleId: q.ruleId,
-          fromDate: q.fromDate,
-          toDate: q.toDate,
-          limit: q.limit ? parseInt(q.limit, 10) : undefined,
-          offset: q.offset ? parseInt(q.offset, 10) : undefined,
-        };
-        return alertStore.filterEvents(filter);
-      }
-    );
-
-    // --- Unacknowledged count ---
-    server.get("/dashboard/api/alerts/unacknowledged", async () => {
-      return { count: alertStore.countUnacknowledged() };
-    });
-
-    // --- Alert templates ---
-    server.get("/dashboard/api/alerts/templates", async () => {
-      return getAllTemplates();
-    });
-
-    server.put<{ Body: any }>("/dashboard/api/alerts/templates", async (request) => {
-      const tpl = request.body as AlertTemplate;
-      if (!tpl?.channelType || !tpl?.titleTemplate) {
-        throw { statusCode: 400, message: "channelType and titleTemplate required" };
-      }
-      setCustomTemplate(tpl);
-      return { ok: true };
-    });
-
-    // --- Severity routing ---
-    if (deps.alertManager) {
-      const alertManager = deps.alertManager;
-
-      server.get("/dashboard/api/alerts/routing", async () => {
-        return alertManager.getSeverityRouter().getRouting();
-      });
-
-      server.put<{ Body: any }>("/dashboard/api/alerts/routing", async (request) => {
-        const body = request.body as Record<string, string[]>;
-        const router = alertManager.getSeverityRouter();
-        for (const [severity, channels] of Object.entries(body)) {
-          if (["info", "warning", "critical"].includes(severity)) {
-            router.setRouting(severity as any, channels as any);
-          }
-        }
-        return { ok: true, routing: router.getRouting() };
-      });
-
-      server.get("/dashboard/api/alerts/metrics", async () => {
-        return alertManager.getMetrics();
-      });
-
-      server.get("/dashboard/api/alerts/aggregator/status", async () => {
-        return { bufferSize: alertManager.getAggregator().getBufferSize() };
-      });
-    }
-  }
 
   server.get<{ Querystring: { limit?: string } }>(
     "/dashboard/api/sessions",

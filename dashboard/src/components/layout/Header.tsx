@@ -1,4 +1,4 @@
-import { Shield, BarChart3, MessageSquare, Home, Keyboard, Bell, Menu, Activity, Settings, HeartPulse } from "lucide-react";
+import { Shield, MessageSquare, Home, Keyboard, Menu, Activity, Settings, HeartPulse } from "lucide-react";
 import { useState } from "react";
 import type { View } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -11,8 +11,6 @@ interface HeaderProps {
 
 const viewConfig: Record<View, { label: string; icon: typeof Home }> = {
   welcome: { label: "Overview", icon: Home },
-  alerts: { label: "Alerts", icon: Bell },
-  dsi: { label: "Security Dashboard", icon: BarChart3 },
   activity: { label: "Activity Feed", icon: Activity },
   config: { label: "Configuration", icon: Settings },
   health: { label: "System Health", icon: HeartPulse },
@@ -21,8 +19,6 @@ const viewConfig: Record<View, { label: string; icon: typeof Home }> = {
 };
 
 const shortcuts = [
-  { key: "a", label: "Alerts" },
-  { key: "d", label: "Security" },
   { key: "c", label: "Chat" },
   { key: "h", label: "Health" },
   { key: "/", label: "Search" },

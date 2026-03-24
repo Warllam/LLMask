@@ -14,7 +14,6 @@ import {
   Plus,
   Home,
   Activity,
-  Bell,
   Settings,
   HeartPulse,
 } from "lucide-react";
@@ -122,22 +121,6 @@ export function Sidebar({
           className={cn(currentView === "welcome" && "bg-primary/10 text-primary")}
         >
           <Home className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onNavigate("alerts")}
-          className={cn(currentView === "alerts" && "bg-primary/10 text-primary")}
-        >
-          <Bell className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onNavigate("dsi")}
-          className={cn(currentView === "dsi" && "bg-primary/10 text-primary")}
-        >
-          <BarChart3 className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
@@ -371,30 +354,6 @@ export function Sidebar({
         >
           <Home className="h-4 w-4" />
           Overview
-        </button>
-        <button
-          onClick={() => onNavigate("alerts")}
-          className={cn(
-            "flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors",
-            currentView === "alerts"
-              ? "bg-primary/10 text-primary font-medium"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          )}
-        >
-          <Bell className="h-4 w-4" />
-          Alerts
-        </button>
-        <button
-          onClick={() => onNavigate("dsi")}
-          className={cn(
-            "flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors",
-            currentView === "dsi"
-              ? "bg-primary/10 text-primary font-medium"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          )}
-        >
-          <BarChart3 className="h-4 w-4" />
-          Security (DSI)
         </button>
         <button
           onClick={() => onNavigate("activity")}
