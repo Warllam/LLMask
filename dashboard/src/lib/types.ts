@@ -205,4 +205,4 @@ export interface ActivityEntry {
   status: "success" | "error";
 }
 
-export type View = "welcome" | "conversation" | "dsi" | "chat" | "alerts" | "activity" | "config" | "health";
+export type View = "welcome" | "conversation" | "chat" | "activity" | "config" | "health";

@@ -1,5 +1,3 @@
-import type { OpenAiCompatibleError } from "../contracts/openai";
-
 export function openAiError(statusCode: number, message: string, type: string, code?: string) {
   return {
     statusCode,
@@ -9,6 +7,6 @@ export function openAiError(statusCode: number, message: string, type: string, c
         type,
         code
       }
-    } satisfies OpenAiCompatibleError
+    }
   };
 }

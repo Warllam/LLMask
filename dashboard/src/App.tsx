@@ -10,9 +10,7 @@ import type { SessionSummary, View } from "@/lib/types";
 
 // Lazy-loaded heavy views
 const Conversation = lazy(() => import("@/components/views/Conversation").then((m) => ({ default: m.Conversation })));
-const DsiDashboard = lazy(() => import("@/components/views/DsiDashboard").then((m) => ({ default: m.DsiDashboard })));
 const Chat = lazy(() => import("@/components/views/Chat").then((m) => ({ default: m.Chat })));
-const Alerts = lazy(() => import("@/components/views/Alerts").then((m) => ({ default: m.Alerts })));
 const ActivityFeed = lazy(() => import("@/components/views/ActivityFeed").then((m) => ({ default: m.ActivityFeed })));
 const Configuration = lazy(() => import("@/components/views/Configuration").then((m) => ({ default: m.Configuration })));
 const SystemHealth = lazy(() => import("@/components/views/SystemHealth").then((m) => ({ default: m.SystemHealth })));
@@ -47,13 +45,7 @@ export function App() {
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.slice(1);
-      if (hash === "alerts") {
-        setCurrentView("alerts");
-        setSelectedSession(null);
-      } else if (hash === "dsi") {
-        setCurrentView("dsi");
-        setSelectedSession(null);
-      } else if (hash.startsWith("chat/")) {
+      if (hash.startsWith("chat/")) {
         const traceId = decodeURIComponent(hash.slice(5));
         setChatSessionId(traceId);
         setCurrentView("chat");
@@ -100,8 +92,6 @@ export function App() {
       const sid = opts?.chatSessionId ?? null;
       setChatSessionId(sid);
       window.location.hash = sid ? `chat/${encodeURIComponent(sid)}` : "chat";
-    } else if (view === "dsi") {
-      window.location.hash = "dsi";
     } else if (view === "activity") {
       window.location.hash = "activity";
     } else if (view === "config") {
@@ -126,12 +116,6 @@ export function App() {
         case "/":
           e.preventDefault();
           document.querySelector<HTMLInputElement>("[data-search-input]")?.focus();
-          break;
-        case "a":
-          handleNavigate("alerts");
-          break;
-        case "d":
-          handleNavigate("dsi");
           break;
         case "c":
           handleNavigate("chat");
@@ -207,8 +191,6 @@ export function App() {
               {currentView === "conversation" && selectedSession && (
                 <Conversation traceId={selectedSession} />
               )}
-              {currentView === "alerts" && <Alerts />}
-              {currentView === "dsi" && <DsiDashboard />}
               {currentView === "activity" && <ActivityFeed />}
               {currentView === "config" && <Configuration />}
               {currentView === "health" && <SystemHealth />}
