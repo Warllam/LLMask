@@ -1,0 +1,39 @@
+{
+  "id": "01-velocity-template",
+  "name": "Velocity Template with SQL Schema Adaptation",
+  "category": "template-code",
+  "description": "Adapt a Velocity .vm template from one CMS schema to another. Tests whether the LLM can understand table/column relationships after masking.",
+  "prompt": "I have a Velocity template (.vm) for our internal CMS \"ContentForge\" that generates article pages. It uses the following SQL schema:\n\n```sql\nCREATE TABLE cf_articles (\n  article_id INT PRIMARY KEY AUTO_INCREMENT,\n  title VARCHAR(255) NOT NULL,\n  slug VARCHAR(255) UNIQUE,\n  body_html LONGTEXT,\n  author_id INT REFERENCES cf_users(user_id),\n  category_id INT REFERENCES cf_categories(cat_id),\n  published_at DATETIME,\n  status ENUM('draft', 'review', 'published', 'archived'),\n  seo_meta JSON,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\nCREATE TABLE cf_users (\n  user_id INT PRIMARY KEY AUTO_INCREMENT,\n  display_name VARCHAR(100),\n  email VARCHAR(255) UNIQUE,\n  avatar_url VARCHAR(500),\n  bio TEXT,\n  role ENUM('admin', 'editor', 'contributor')\n);\n\nCREATE TABLE cf_categories (\n  cat_id INT PRIMARY KEY AUTO_INCREMENT,\n  cat_name VARCHAR(100),\n  cat_slug VARCHAR(100) UNIQUE,\n  parent_id INT REFERENCES cf_categories(cat_id)\n);\n```\n\nHere's the current Velocity template:\n\n```velocity\n#set($article = $contentForge.getArticle($articleId))\n#set($author = $contentForge.getUser($article.author_id))\n#set($category = $contentForge.getCategory($article.category_id))\n\n<article class=\"cf-article cf-article--${article.status}\">\n  <header>\n    <div class=\"cf-breadcrumb\">\n      <a href=\"/categories/${category.cat_slug}\">$category.cat_name</a>\n    </div>\n    <h1>$article.title</h1>\n    <div class=\"cf-meta\">\n      <img src=\"$author.avatar_url\" alt=\"$author.display_name\" class=\"cf-avatar\" />\n      <span class=\"cf-author\">$author.display_name</span>\n      <time datetime=\"$dateTool.format('yyyy-MM-dd', $article.published_at)\">\n        $dateTool.format('MMMM d, yyyy', $article.published_at)\n      </time>\n    </div>\n  </header>\n  \n  <div class=\"cf-content\">\n    $article.body_html\n  </div>\n  \n  #if($article.seo_meta)\n    <script type=\"application/ld+json\">\n      $jsonTool.serialize($article.seo_meta)\n    </script>\n  #end\n</article>\n```\n\nI need to adapt this template to work with our new CMS \"PageStream\" which has a different schema:\n\n```sql\nCREATE TABLE ps_posts (\n  post_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  headline VARCHAR(300) NOT NULL,\n  url_path VARCHAR(300) UNIQUE,\n  content_blocks JSONB,\n  creator_id UUID REFERENCES ps_creators(creator_id),\n  topic_id UUID REFERENCES ps_topics(topic_id),\n  publish_date TIMESTAMPTZ,\n  workflow_state VARCHAR(20) DEFAULT 'draft',\n  metadata JSONB,\n  inserted_at TIMESTAMPTZ DEFAULT now()\n);\n\nCREATE TABLE ps_creators (\n  creator_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  full_name VARCHAR(150),\n  contact_email VARCHAR(255) UNIQUE,\n  profile_image_url TEXT,\n  biography TEXT,\n  access_level VARCHAR(20) DEFAULT 'writer'\n);\n\nCREATE TABLE ps_topics (\n  topic_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  topic_title VARCHAR(150),\n  topic_slug VARCHAR(150) UNIQUE,\n  parent_topic_id UUID REFERENCES ps_topics(topic_id)\n);\n```\n\nPlease adapt the Velocity template to use the PageStream schema, mapping the old fields to the new ones. Keep the same HTML structure but update all variable names, service calls, and field references.",
+  "sensitiveElements": [
+    "ContentForge",
+    "PageStream",
+    "cf_articles",
+    "cf_users",
+    "cf_categories",
+    "ps_posts",
+    "ps_creators",
+    "ps_topics",
+    "contentForge"
+  ],
+  "expectedResponseElements": [
+    "ps_posts",
+    "ps_creators",
+    "ps_topics",
+    "headline",
+    "url_path",
+    "content_blocks",
+    "creator_id",
+    "topic_id",
+    "publish_date",
+    "workflow_state",
+    "full_name",
+    "profile_image_url",
+    "topic_title",
+    "topic_slug",
+    "pageStream",
+    "#set",
+    "<article",
+    "cf-breadcrumb"
+  ],
+  "codeBlocks": true
+}

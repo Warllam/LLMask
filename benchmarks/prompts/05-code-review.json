@@ -1,0 +1,32 @@
+{
+  "id": "05-code-review",
+  "name": "Code Review with Proprietary Function Names",
+  "category": "code-review",
+  "description": "Review a Go service with proprietary function and type names for bugs and improvements.",
+  "prompt": "Please review this Go code from our internal fraud detection service at Cyberix Labs. Focus on concurrency bugs, error handling, and performance issues.\n\n```go\npackage fraudengine\n\nimport (\n\t\"context\"\n\t\"fmt\"\n\t\"sync\"\n\t\"time\"\n\n\t\"github.com/cyberix-labs/platform/pkg/cyberixdb\"\n\t\"github.com/cyberix-labs/platform/pkg/cyberixmetrics\"\n\t\"github.com/cyberix-labs/platform/pkg/cyberixqueue\"\n)\n\ntype CyberixFraudScore struct {\n\tTransactionID string\n\tRiskLevel     CyberixRiskLevel\n\tScore         float64\n\tRules         []CyberixRuleMatch\n\tComputedAt    time.Time\n}\n\ntype CyberixRiskLevel int\n\nconst (\n\tCyberixRiskLow    CyberixRiskLevel = iota\n\tCyberixRiskMedium\n\tCyberixRiskHigh\n\tCyberixRiskCritical\n)\n\ntype CyberixFraudEngine struct {\n\tdb       *cyberixdb.Client\n\tqueue    *cyberixqueue.Publisher\n\tmetrics  *cyberixmetrics.Collector\n\trules    []CyberixFraudRule\n\tcache    map[string]*CyberixFraudScore\n\tcacheMu  sync.Mutex\n}\n\ntype CyberixFraudRule interface {\n\tEvaluate(ctx context.Context, txn *CyberixTransaction) (float64, error)\n\tName() string\n\tWeight() float64\n}\n\ntype CyberixTransaction struct {\n\tID              string\n\tAmount          float64\n\tCurrency        string\n\tMerchantID      string\n\tCardFingerprint string\n\tIPAddress       string\n\tDeviceID        string\n\tUserID          string\n\tTimestamp       time.Time\n\tMetadata        map[string]interface{}\n}\n\nfunc NewCyberixFraudEngine(db *cyberixdb.Client, queue *cyberixqueue.Publisher) *CyberixFraudEngine {\n\treturn &CyberixFraudEngine{\n\t\tdb:      db,\n\t\tqueue:   queue,\n\t\tmetrics: cyberixmetrics.Default(),\n\t\tcache:   make(map[string]*CyberixFraudScore),\n\t}\n}\n\nfunc (e *CyberixFraudEngine) ScoreTransaction(ctx context.Context, txn *CyberixTransaction) (*CyberixFraudScore, error) {\n\t// Check cache first\n\te.cacheMu.Lock()\n\tif cached, ok := e.cache[txn.ID]; ok {\n\t\te.cacheMu.Unlock()\n\t\treturn cached, nil\n\t}\n\te.cacheMu.Unlock()\n\n\tvar (\n\t\ttotalScore float64\n\t\ttotalWeight float64\n\t\tmatches    []CyberixRuleMatch\n\t\terrs       []error\n\t)\n\n\t// Run all rules in parallel\n\tvar wg sync.WaitGroup\n\tfor _, rule := range e.rules {\n\t\twg.Add(1)\n\t\tgo func(r CyberixFraudRule) {\n\t\t\tdefer wg.Done()\n\t\t\tscore, err := r.Evaluate(ctx, txn)\n\t\t\tif err != nil {\n\t\t\t\terrs = append(errs, fmt.Errorf(\"rule %s failed: %w\", r.Name(), err))\n\t\t\t\treturn\n\t\t\t}\n\t\t\ttotalScore += score * r.Weight()\n\t\t\ttotalWeight += r.Weight()\n\t\t\tif score > 0.5 {\n\t\t\t\tmatches = append(matches, CyberixRuleMatch{Rule: r.Name(), Score: score})\n\t\t\t}\n\t\t}(rule)\n\t}\n\twg.Wait()\n\n\tnormalizedScore := totalScore / totalWeight\n\n\tresult := &CyberixFraudScore{\n\t\tTransactionID: txn.ID,\n\t\tRiskLevel:     e.classifyRisk(normalizedScore),\n\t\tScore:         normalizedScore,\n\t\tRules:         matches,\n\t\tComputedAt:    time.Now(),\n\t}\n\n\t// Cache result\n\te.cacheMu.Lock()\n\te.cache[txn.ID] = result\n\te.cacheMu.Unlock()\n\n\t// Persist and publish async\n\tgo e.persistScore(result)\n\tgo e.queue.Publish(\"cyberix.fraud.scored\", result)\n\n\treturn result, nil\n}\n\nfunc (e *CyberixFraudEngine) classifyRisk(score float64) CyberixRiskLevel {\n\tswitch {\n\tcase score >= 0.9:\n\t\treturn CyberixRiskCritical\n\tcase score >= 0.7:\n\t\treturn CyberixRiskHigh\n\tcase score >= 0.4:\n\t\treturn CyberixRiskMedium\n\tdefault:\n\t\treturn CyberixRiskLow\n\t}\n}\n\nfunc (e *CyberixFraudEngine) persistScore(score *CyberixFraudScore) {\n\te.db.Insert(\"cyberix_fraud_scores\", score)\n}\n\ntype CyberixRuleMatch struct {\n\tRule  string\n\tScore float64\n}\n```\n\nWhat bugs do you see? What would you change for production readiness?",
+  "sensitiveElements": [
+    "Cyberix Labs",
+    "cyberix",
+    "Cyberix",
+    "github.com/cyberix-labs/platform"
+  ],
+  "expectedResponseElements": [
+    "race condition",
+    "data race",
+    "mutex",
+    "sync.Mutex",
+    "totalScore",
+    "totalWeight",
+    "errs",
+    "matches",
+    "goroutine",
+    "cache",
+    "unbounded",
+    "context",
+    "persistScore",
+    "error handling",
+    "divide by zero",
+    "totalWeight"
+  ],
+  "codeBlocks": true
+}

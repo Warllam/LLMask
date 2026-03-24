@@ -1,0 +1,32 @@
+{
+  "id": "08-js-api-integration",
+  "name": "JavaScript/TypeScript API Integration",
+  "category": "api-integration",
+  "description": "Implement error handling and retry logic for a TypeScript API client.",
+  "prompt": "Add proper error handling, retry logic with exponential backoff, and request/response logging to this TypeScript API client for our partner integration with Stratium Analytics.\n\n```typescript\nimport axios, { AxiosInstance, AxiosRequestConfig } from 'axios';\n\ninterface StratiumConfig {\n  baseUrl: string;\n  apiKey: string;\n  clientId: string;\n  environment: 'sandbox' | 'production';\n}\n\ninterface StratiumAnalyticsEvent {\n  eventType: string;\n  userId: string;\n  sessionId: string;\n  timestamp: string;\n  properties: Record<string, unknown>;\n  userTraits?: {\n    email?: string;\n    name?: string;\n    company?: string;\n    plan?: string;\n  };\n}\n\ninterface StratiumSegment {\n  segmentId: string;\n  name: string;\n  criteria: StratiumSegmentCriteria[];\n  estimatedSize: number;\n}\n\ninterface StratiumSegmentCriteria {\n  field: string;\n  operator: 'eq' | 'neq' | 'gt' | 'lt' | 'contains' | 'in';\n  value: unknown;\n}\n\ninterface StratiumCohortReport {\n  cohortId: string;\n  period: string;\n  metrics: {\n    retention: number[];\n    revenue: number[];\n    activeUsers: number[];\n  };\n}\n\nexport class StratiumClient {\n  private http: AxiosInstance;\n  private config: StratiumConfig;\n\n  constructor(config: StratiumConfig) {\n    this.config = config;\n    this.http = axios.create({\n      baseURL: config.baseUrl,\n      headers: {\n        'Authorization': `Bearer ${config.apiKey}`,\n        'X-Stratium-Client-ID': config.clientId,\n        'X-Stratium-Environment': config.environment,\n        'Content-Type': 'application/json'\n      },\n      timeout: 10000\n    });\n  }\n\n  async trackEvent(event: StratiumAnalyticsEvent): Promise<void> {\n    await this.http.post('/v2/events/track', event);\n  }\n\n  async trackBatch(events: StratiumAnalyticsEvent[]): Promise<void> {\n    await this.http.post('/v2/events/batch', { events });\n  }\n\n  async getSegments(): Promise<StratiumSegment[]> {\n    const { data } = await this.http.get('/v2/segments');\n    return data.segments;\n  }\n\n  async getSegmentUsers(segmentId: string, page = 1, limit = 100): Promise<{ users: string[]; total: number }> {\n    const { data } = await this.http.get(`/v2/segments/${segmentId}/users`, {\n      params: { page, limit }\n    });\n    return data;\n  }\n\n  async getCohortReport(cohortId: string, period: string): Promise<StratiumCohortReport> {\n    const { data } = await this.http.get(`/v2/cohorts/${cohortId}/report`, {\n      params: { period }\n    });\n    return data;\n  }\n\n  async createSegment(name: string, criteria: StratiumSegmentCriteria[]): Promise<StratiumSegment> {\n    const { data } = await this.http.post('/v2/segments', { name, criteria });\n    return data;\n  }\n}\n\n// Usage:\nconst client = new StratiumClient({\n  baseUrl: 'https://api.stratium-analytics.com',\n  apiKey: 'strtm_prod_a8f3e7b2c1d4_placeholder_key',\n  clientId: 'clnt_nexova_prod_2024',\n  environment: 'production'\n});\n```\n\nRequirements:\n1. Retry failed requests up to 3 times with exponential backoff (429, 500, 502, 503)\n2. Log all requests/responses (redact the API key in logs)\n3. Add circuit breaker pattern for cascading failure protection\n4. Add request ID tracking for debugging\n5. Handle rate limiting (respect Retry-After header)\n6. Type-safe error classes (StratiumApiError, StratiumRateLimitError, etc.)",
+  "sensitiveElements": [
+    "Stratium Analytics",
+    "Stratium",
+    "stratium-analytics.com",
+    "strtm_prod_a8f3e7b2c1d4_placeholder_key",
+    "clnt_nexova_prod_2024",
+    "nexova"
+  ],
+  "expectedResponseElements": [
+    "retry",
+    "exponential backoff",
+    "429",
+    "Retry-After",
+    "circuit breaker",
+    "StratiumApiError",
+    "StratiumRateLimitError",
+    "interceptor",
+    "request ID",
+    "class",
+    "async",
+    "catch",
+    "AxiosInstance",
+    "setTimeout"
+  ],
+  "codeBlocks": true
+}

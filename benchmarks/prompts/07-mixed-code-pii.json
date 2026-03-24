@@ -1,0 +1,39 @@
+{
+  "id": "07-mixed-code-pii",
+  "name": "Mixed Code + PII Explanation",
+  "category": "mixed",
+  "description": "Explain code that processes PII data — both technical identifiers and personal data are present.",
+  "prompt": "Explain what this user data export function does, step by step. I'm onboarding a new developer and need clear documentation. Flag any GDPR compliance issues you see.\n\n```typescript\nimport { PrismaClient } from '@prisma/client';\nimport { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';\nimport { createCipheriv, randomBytes } from 'crypto';\n\nconst prisma = new PrismaClient();\nconst s3 = new S3Client({\n  region: 'eu-west-3',\n  endpoint: 'https://s3.oravion-cloud.internal',\n  credentials: {\n    accessKeyId: 'AKIAIOSFODNN7EXAMPLE',\n    secretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'\n  }\n});\n\nconst ENCRYPTION_KEY = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6';\nconst EXPORT_BUCKET = 'oravion-gdpr-exports';\n\ninterface OravionUserProfile {\n  userId: string;\n  email: string;\n  fullName: string;\n  phone: string;\n  dateOfBirth: string;\n  nationalId: string;\n  address: OravionAddress;\n  paymentMethods: OravionPaymentMethod[];\n  loginHistory: OravionLoginEntry[];\n  preferences: Record<string, unknown>;\n}\n\ninterface OravionAddress {\n  street: string;\n  city: string;\n  postalCode: string;\n  country: string;\n}\n\ninterface OravionPaymentMethod {\n  type: 'card' | 'iban';\n  last4: string;\n  expiryDate?: string;\n  bankName?: string;\n}\n\ninterface OravionLoginEntry {\n  timestamp: Date;\n  ipAddress: string;\n  userAgent: string;\n  location?: string;\n}\n\nexport async function exportUserData(userId: string): Promise<string> {\n  // Fetch all user data\n  const user = await prisma.oravionUser.findUnique({\n    where: { id: userId },\n    include: {\n      addresses: true,\n      paymentMethods: true,\n      loginHistory: { take: 1000, orderBy: { timestamp: 'desc' } },\n      orders: { include: { items: true } },\n      supportTickets: true,\n      consents: true\n    }\n  });\n\n  if (!user) throw new Error(`User ${userId} not found`);\n\n  const profile: OravionUserProfile = {\n    userId: user.id,\n    email: user.email,             // e.g., marc.duval@gmail.com\n    fullName: user.fullName,       // e.g., Marc DUVAL\n    phone: user.phone,             // e.g., +33 6 98 76 54 32\n    dateOfBirth: user.dob,         // e.g., 1990-03-15\n    nationalId: user.nationalId,   // e.g., 1 90 03 75 108 234 56\n    address: user.addresses[0],\n    paymentMethods: user.paymentMethods.map(pm => ({\n      type: pm.type,\n      last4: pm.last4,\n      expiryDate: pm.expiryDate,\n      bankName: pm.bankName\n    })),\n    loginHistory: user.loginHistory,\n    preferences: user.preferences as Record<string, unknown>\n  };\n\n  // Encrypt the export\n  const iv = randomBytes(16);\n  const cipher = createCipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY), iv);\n  let encrypted = cipher.update(JSON.stringify(profile), 'utf8', 'hex');\n  encrypted += cipher.final('hex');\n\n  const exportData = {\n    iv: iv.toString('hex'),\n    data: encrypted,\n    exportedAt: new Date().toISOString(),\n    userId\n  };\n\n  // Upload to S3\n  const key = `exports/${userId}/${Date.now()}.json`;\n  await s3.send(new PutObjectCommand({\n    Bucket: EXPORT_BUCKET,\n    Key: key,\n    Body: JSON.stringify(exportData),\n    ContentType: 'application/json',\n    ServerSideEncryption: 'AES256'\n  }));\n\n  // Log the export (for audit trail)\n  await prisma.oravionAuditLog.create({\n    data: {\n      action: 'USER_DATA_EXPORT',\n      userId,\n      details: `Exported to s3://${EXPORT_BUCKET}/${key}`,\n      ipAddress: 'system',\n      timestamp: new Date()\n    }\n  });\n\n  return `s3://${EXPORT_BUCKET}/${key}`;\n}\n```\n\nAlso, the new developer's name is Thomas Lefèvre (thomas.lefevre@oravion.com) — can you format the docs so I can send them to him?",
+  "sensitiveElements": [
+    "oravion",
+    "Oravion",
+    "oravion-cloud.internal",
+    "AKIAIOSFODNN7EXAMPLE",
+    "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+    "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+    "oravion-gdpr-exports",
+    "marc.duval@gmail.com",
+    "Marc DUVAL",
+    "+33 6 98 76 54 32",
+    "1 90 03 75 108 234 56",
+    "Thomas Lefèvre",
+    "thomas.lefevre@oravion.com"
+  ],
+  "expectedResponseElements": [
+    "GDPR",
+    "encryption",
+    "AES",
+    "S3",
+    "PrismaClient",
+    "exportUserData",
+    "OravionUserProfile",
+    "audit log",
+    "right to access",
+    "data portability",
+    "consent",
+    "loginHistory",
+    "paymentMethods",
+    "nationalId"
+  ],
+  "codeBlocks": true
+}
