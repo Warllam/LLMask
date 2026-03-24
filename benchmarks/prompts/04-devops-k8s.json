@@ -1,0 +1,43 @@
+{
+  "id": "04-devops-k8s",
+  "name": "DevOps Docker/Kubernetes Config",
+  "category": "devops",
+  "description": "Debug and fix a Kubernetes deployment with internal hostnames and IPs.",
+  "prompt": "Our microservice `order-processor` in the `fintech-prod` namespace keeps crashing with OOMKilled. It connects to our internal services. Here's the deployment:\n\n```yaml\napiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: order-processor\n  namespace: fintech-prod\n  labels:\n    app: order-processor\n    team: payments\n    company: velantis\nspec:\n  replicas: 3\n  selector:\n    matchLabels:\n      app: order-processor\n  template:\n    metadata:\n      labels:\n        app: order-processor\n    spec:\n      containers:\n      - name: order-processor\n        image: registry.velantis.internal:5000/order-processor:v2.14.3\n        resources:\n          requests:\n            memory: \"256Mi\"\n            cpu: \"250m\"\n          limits:\n            memory: \"512Mi\"\n            cpu: \"500m\"\n        env:\n        - name: DATABASE_URL\n          value: \"postgresql://svc_orders:Pr0d$ecret!2024@db-master.velantis.internal:5432/orders_prod\"\n        - name: REDIS_URL\n          value: \"redis://:r3d1s_s3cr3t@redis-cluster.velantis.internal:6379/0\"\n        - name: KAFKA_BROKERS\n          value: \"kafka-0.velantis.internal:9092,kafka-1.velantis.internal:9092,kafka-2.velantis.internal:9092\"\n        - name: VAULT_ADDR\n          value: \"https://vault.velantis.internal:8200\"\n        - name: VAULT_TOKEN\n          value: \"hvs.CAESIJmKn8GDjhFz_placeholder_token_xYz\"\n        - name: NEW_RELIC_LICENSE_KEY\n          value: \"eu01xx4a7b3c9d2e1f0placeholder123456NRAL\"\n        - name: SENTRY_DSN\n          value: \"https://abc123placeholder@o123456.ingest.sentry.io/987654\"\n        - name: PAYMENT_GATEWAY_URL\n          value: \"https://api.velantis-payments.internal:8443/v2\"\n        - name: PAYMENT_API_KEY\n          value: \"pk_prod_Vel4nt1s_placeholder_key_2024\"\n        ports:\n        - containerPort: 8080\n        livenessProbe:\n          httpGet:\n            path: /health\n            port: 8080\n          initialDelaySeconds: 30\n          periodSeconds: 10\n        readinessProbe:\n          httpGet:\n            path: /ready\n            port: 8080\n          initialDelaySeconds: 10\n          periodSeconds: 5\n        volumeMounts:\n        - name: tls-certs\n          mountPath: /etc/tls\n          readOnly: true\n      volumes:\n      - name: tls-certs\n        secret:\n          secretName: order-processor-tls\n      imagePullSecrets:\n      - name: velantis-registry-creds\n---\napiVersion: v1\nkind: Service\nmetadata:\n  name: order-processor\n  namespace: fintech-prod\nspec:\n  selector:\n    app: order-processor\n  ports:\n  - port: 80\n    targetPort: 8080\n  type: ClusterIP\n```\n\nThe container is processing ~5000 orders/min during peak. `kubectl top pods` shows memory spikes to 490Mi before getting killed. The Java app uses `-Xmx384m` but I suspect the Kafka consumer buffer and connection pools are eating the rest. How should I fix the resource limits and what other changes do you recommend?",
+  "sensitiveElements": [
+    "velantis",
+    "Velantis",
+    "registry.velantis.internal:5000",
+    "db-master.velantis.internal",
+    "redis-cluster.velantis.internal",
+    "kafka-0.velantis.internal",
+    "kafka-1.velantis.internal",
+    "kafka-2.velantis.internal",
+    "vault.velantis.internal",
+    "api.velantis-payments.internal",
+    "svc_orders:Pr0d$ecret!2024",
+    "r3d1s_s3cr3t",
+    "hvs.CAESIJmKn8GDjhFz_placeholder_token_xYz",
+    "eu01xx4a7b3c9d2e1f0placeholder123456NRAL",
+    "pk_prod_Vel4nt1s_placeholder_key_2024",
+    "192.168.",
+    "10.0."
+  ],
+  "expectedResponseElements": [
+    "memory",
+    "limits",
+    "Xmx",
+    "OOMKilled",
+    "resources",
+    "Kafka",
+    "consumer",
+    "buffer",
+    "connection pool",
+    "1Gi",
+    "heap",
+    "Secret",
+    "ConfigMap",
+    "env"
+  ],
+  "codeBlocks": true
+}

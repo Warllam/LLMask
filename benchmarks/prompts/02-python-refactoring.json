@@ -1,0 +1,32 @@
+{
+  "id": "02-python-refactoring",
+  "name": "Python Refactoring with Company-Specific Names",
+  "category": "refactoring",
+  "description": "Refactor a Python class with proprietary naming conventions. Tests whether masking preserves refactoring intent.",
+  "prompt": "Refactor this Python class from our internal billing system at Nexova Technologies. It's grown too large and violates SRP. Extract the invoice generation logic into a separate service class.\n\n```python\nfrom nexova.db import NexovaDB, NexovaTransaction\nfrom nexova.auth import NexovaAuthContext\nfrom nexova.models import NexovaClient, NexovaInvoice, NexovaLineItem\nfrom nexova.notifications import NexovaMailer\nfrom nexova.pdf import NexovaPDFEngine\nfrom datetime import datetime, timedelta\nfrom decimal import Decimal\nimport logging\n\nlogger = logging.getLogger('nexova.billing')\n\nclass NexovaBillingManager:\n    \"\"\"Handles all billing operations for Nexova's SaaS platform.\"\"\"\n    \n    TAX_RATE_FR = Decimal('0.20')  # TVA France\n    TAX_RATE_DE = Decimal('0.19')  # MwSt Germany\n    TAX_RATE_DEFAULT = Decimal('0.00')  # Non-EU\n    \n    NEXOVA_SIRET = '84726391500014'\n    NEXOVA_VAT_ID = 'FR12847263915'\n    NEXOVA_ADDRESS = '42 Rue de la Paix, 75002 Paris, France'\n    NEXOVA_BANK_IBAN = 'FR76 3000 6000 0112 3456 7890 189'\n    \n    def __init__(self, db: NexovaDB, auth: NexovaAuthContext):\n        self.db = db\n        self.auth = auth\n        self.mailer = NexovaMailer()\n        self.pdf_engine = NexovaPDFEngine()\n    \n    def generate_invoice(self, client_id: str, period_start: datetime, period_end: datetime) -> NexovaInvoice:\n        client = self.db.get_client(client_id)\n        if not client:\n            raise ValueError(f'Client {client_id} not found in Nexova database')\n        \n        # Calculate usage from Nexova's metering system\n        usage = self.db.query(\n            'SELECT feature_code, quantity, unit_price '\n            'FROM nexova_usage_records '\n            'WHERE client_id = %s AND recorded_at BETWEEN %s AND %s',\n            (client_id, period_start, period_end)\n        )\n        \n        line_items = []\n        subtotal = Decimal('0')\n        for record in usage:\n            amount = Decimal(str(record['quantity'])) * Decimal(str(record['unit_price']))\n            line_items.append(NexovaLineItem(\n                description=f\"Nexova {record['feature_code']} usage\",\n                quantity=record['quantity'],\n                unit_price=record['unit_price'],\n                amount=amount\n            ))\n            subtotal += amount\n        \n        tax_rate = self._get_tax_rate(client.country_code)\n        tax_amount = subtotal * tax_rate\n        total = subtotal + tax_amount\n        \n        invoice_number = self._generate_invoice_number()\n        \n        invoice = NexovaInvoice(\n            number=invoice_number,\n            client=client,\n            line_items=line_items,\n            subtotal=subtotal,\n            tax_rate=tax_rate,\n            tax_amount=tax_amount,\n            total=total,\n            issued_at=datetime.utcnow(),\n            due_date=datetime.utcnow() + timedelta(days=30),\n            nexova_siret=self.NEXOVA_SIRET,\n            nexova_vat_id=self.NEXOVA_VAT_ID,\n            nexova_address=self.NEXOVA_ADDRESS,\n            bank_iban=self.NEXOVA_BANK_IBAN\n        )\n        \n        with NexovaTransaction(self.db) as txn:\n            txn.insert('nexova_invoices', invoice.to_dict())\n            for item in line_items:\n                txn.insert('nexova_invoice_lines', {\n                    'invoice_number': invoice_number,\n                    **item.to_dict()\n                })\n        \n        # Generate PDF and send\n        pdf_bytes = self.pdf_engine.render_invoice(invoice)\n        self.mailer.send_invoice(\n            to=client.billing_email,\n            subject=f'Nexova Invoice {invoice_number}',\n            pdf_attachment=pdf_bytes,\n            invoice=invoice\n        )\n        \n        logger.info(f'Generated invoice {invoice_number} for client {client.company_name} (€{total})')\n        return invoice\n    \n    def _get_tax_rate(self, country_code: str) -> Decimal:\n        rates = {'FR': self.TAX_RATE_FR, 'DE': self.TAX_RATE_DE}\n        return rates.get(country_code, self.TAX_RATE_DEFAULT)\n    \n    def _generate_invoice_number(self) -> str:\n        year = datetime.utcnow().strftime('%Y')\n        seq = self.db.next_sequence('nexova_invoice_seq')\n        return f'NXV-{year}-{seq:06d}'\n```\n\nExtract an `InvoiceGenerationService` that handles the creation logic, keeping `NexovaBillingManager` as a thin orchestrator. Maintain the same transactional guarantees.",
+  "sensitiveElements": [
+    "Nexova Technologies",
+    "Nexova",
+    "84726391500014",
+    "FR12847263915",
+    "42 Rue de la Paix, 75002 Paris, France",
+    "FR76 3000 6000 0112 3456 7890 189",
+    "NXV-"
+  ],
+  "expectedResponseElements": [
+    "InvoiceGenerationService",
+    "NexovaBillingManager",
+    "generate_invoice",
+    "line_items",
+    "subtotal",
+    "tax_rate",
+    "NexovaTransaction",
+    "NexovaInvoice",
+    "NexovaLineItem",
+    "def ",
+    "class ",
+    "__init__",
+    "self.db"
+  ],
+  "codeBlocks": true
+}

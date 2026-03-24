@@ -1,0 +1,33 @@
+{
+  "id": "03-sql-optimization",
+  "name": "SQL Query Optimization with Real Table Names",
+  "category": "sql",
+  "description": "Optimize a slow SQL query using real table/column names from a proprietary schema.",
+  "prompt": "This query runs on our PostgreSQL 15 database at Meridian Health Systems and takes 45 seconds. The `mhs_patient_encounters` table has 12M rows, `mhs_providers` has 8K rows, and `mhs_diagnoses` has 50M rows. Help me optimize it.\n\n```sql\nSELECT \n  p.patient_mrn,\n  p.patient_first_name || ' ' || p.patient_last_name AS patient_full_name,\n  p.date_of_birth,\n  p.insurance_policy_number,\n  enc.encounter_id,\n  enc.encounter_date,\n  enc.encounter_type,\n  enc.facility_code,\n  prov.provider_npi,\n  prov.provider_name,\n  prov.specialty_code,\n  diag.icd10_code,\n  diag.diagnosis_description,\n  diag.diagnosis_date,\n  diag.is_primary,\n  bill.total_billed_amount,\n  bill.insurance_paid_amount,\n  bill.patient_copay,\n  bill.balance_due\nFROM mhs_patients p\nJOIN mhs_patient_encounters enc ON enc.patient_id = p.patient_id\nJOIN mhs_providers prov ON prov.provider_id = enc.attending_provider_id\nLEFT JOIN mhs_diagnoses diag ON diag.encounter_id = enc.encounter_id\nLEFT JOIN mhs_billing bill ON bill.encounter_id = enc.encounter_id\nWHERE enc.encounter_date BETWEEN '2024-01-01' AND '2024-12-31'\n  AND enc.facility_code IN ('MHS-MAIN', 'MHS-NORTH', 'MHS-SOUTH')\n  AND p.is_active = true\n  AND (diag.icd10_code LIKE 'E11%' OR diag.icd10_code LIKE 'I10%')\nORDER BY enc.encounter_date DESC, p.patient_last_name ASC\nLIMIT 500 OFFSET 0;\n```\n\nExisting indexes:\n```sql\nCREATE INDEX idx_enc_patient_id ON mhs_patient_encounters(patient_id);\nCREATE INDEX idx_enc_date ON mhs_patient_encounters(encounter_date);\nCREATE INDEX idx_diag_encounter ON mhs_diagnoses(encounter_id);\nCREATE INDEX idx_patients_active ON mhs_patients(is_active) WHERE is_active = true;\n```\n\nThe EXPLAIN ANALYZE shows a sequential scan on `mhs_diagnoses` and a hash join taking 30s. What indexes should I add and how should I restructure the query?",
+  "sensitiveElements": [
+    "Meridian Health Systems",
+    "MHS-MAIN",
+    "MHS-NORTH",
+    "MHS-SOUTH",
+    "patient_mrn",
+    "insurance_policy_number",
+    "patient_first_name",
+    "patient_last_name",
+    "provider_npi",
+    "date_of_birth"
+  ],
+  "expectedResponseElements": [
+    "CREATE INDEX",
+    "mhs_diagnoses",
+    "mhs_patient_encounters",
+    "encounter_id",
+    "icd10_code",
+    "facility_code",
+    "covering index",
+    "composite index",
+    "WHERE",
+    "JOIN",
+    "EXPLAIN"
+  ],
+  "codeBlocks": true
+}

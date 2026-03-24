@@ -1,0 +1,40 @@
+{
+  "id": "06-email-pii",
+  "name": "Email Drafting with PII",
+  "category": "natural-language",
+  "description": "Draft a professional email containing names, addresses, phone numbers, and account details.",
+  "prompt": "Draft a professional follow-up email for me. Here's the context:\n\nI'm Sophie Marchand, Head of Client Relations at Luminex Financial Group (sophie.marchand@luminex-group.fr). I need to follow up with our client Jean-Pierre DELACROIX (jp.delacroix@airbus.com, phone: +33 6 12 34 56 78) about his portfolio restructuring.\n\nKey points to include:\n- Reference our meeting on March 15th at our Paris office (88 Avenue des Champs-Élysées, 75008 Paris)\n- His account number is LFG-2024-JP-00847\n- We discussed moving €2.4M from his current allocation to the Luminex Growth Fund (ISIN: FR0014003B15)\n- His IBAN for the transfer: FR76 1234 5678 9012 3456 7890 123\n- His national ID (for compliance): 1 85 12 75 120 001 83\n- Next meeting scheduled for April 2nd at 14:00\n- CC his financial advisor Marie FONTAINE (m.fontaine@luminex-group.fr, ext. 4892)\n\nTone: professional but warm. This is a high-value client we want to retain.",
+  "sensitiveElements": [
+    "Sophie Marchand",
+    "sophie.marchand@luminex-group.fr",
+    "Jean-Pierre DELACROIX",
+    "jp.delacroix@airbus.com",
+    "+33 6 12 34 56 78",
+    "88 Avenue des Champs-Élysées, 75008 Paris",
+    "LFG-2024-JP-00847",
+    "€2.4M",
+    "FR0014003B15",
+    "FR76 1234 5678 9012 3456 7890 123",
+    "1 85 12 75 120 001 83",
+    "Marie FONTAINE",
+    "m.fontaine@luminex-group.fr",
+    "Luminex Financial Group",
+    "luminex-group.fr",
+    "airbus.com"
+  ],
+  "expectedResponseElements": [
+    "Subject:",
+    "Dear",
+    "portfolio",
+    "restructuring",
+    "Growth Fund",
+    "meeting",
+    "March 15",
+    "April 2",
+    "transfer",
+    "compliance",
+    "Best regards",
+    "CC:"
+  ],
+  "codeBlocks": false
+}
