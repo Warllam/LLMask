@@ -20,7 +20,7 @@ LLMask is an OpenAI-compatible proxy that automatically detects and masks sensit
 
 ```bash
 # Clone and install
-git clone https://github.com/yourusername/llmask.git
+git clone https://github.com/Warllam/LLMask.git
 cd llmask
 npm install
 
@@ -156,7 +156,7 @@ Open `http://localhost:8787/dashboard` to:
 - ⚙️ **Config** — Adjust detection rules and policies
 - 📊 **Stats** — Request counts, masking stats, response times
 
-_Screenshot placeholder: `docs/dashboard-screenshot.png`_
+<!-- TODO: add dashboard screenshot -->
 
 ## Docker Deployment
 
@@ -195,15 +195,13 @@ npm run build
 
 This project is licensed under the [Apache License 2.0](LICENSE).
 
-You are free to use LLMask for **non-commercial purposes** (personal projects, research, evaluation).  
-
 See [LICENSE](./LICENSE) for details.
 
 ## Support
 
 - 📖 **Documentation**: [docs/](./docs/)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/yourusername/llmask/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/llmask/discussions)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/Warllam/LLMask/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/Warllam/LLMask/discussions)
 
 ## Contributing
 
@@ -211,4 +209,4 @@ Contributions are welcome! Please open an issue first to discuss what you'd like
 
 ---
 
-**Note**: LLMask is a privacy-focused tool designed for non-commercial use. All sensitive data is processed locally and never sent to third parties. Always review your organization's data policies before deploying.
+**Note**: LLMask is a privacy-focused tool. All sensitive data is processed locally and never sent to third parties. Always review your organization's data policies before deploying.
