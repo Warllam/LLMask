@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { resetMetrics } from "../../src/shared/metrics";
+import { resetMetrics } from "../src/shared/metrics";
 import {
   registry,
   startTimer,
@@ -17,7 +17,7 @@ import {
   alertsByLevel,
   detectionDuration,
   pipelineDuration,
-} from "../../src/modules/metrics/prometheus-metrics";
+} from "../src/modules/metrics/prometheus-metrics";
 
 describe("Pipeline Prometheus metrics", () => {
   beforeEach(() => {

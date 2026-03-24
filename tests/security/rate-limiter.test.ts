@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { SlidingWindowRateLimiter, hashKey, extractKey, resolveLimit } from "../../../src/modules/security/rate-limiter";
+import { SlidingWindowRateLimiter, hashKey, extractKey, resolveLimit } from "../../src/modules/security/rate-limiter";
 
 describe("SlidingWindowRateLimiter", () => {
   let limiter: SlidingWindowRateLimiter;

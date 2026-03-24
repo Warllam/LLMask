@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { RewriteEngineV4 as RewriteEngine } from "../../src/modules/rewrite/rewrite-engine-v4";
-import { SqliteMappingStore } from "../../src/modules/mapping-store/sqlite-mapping-store";
-import type { ChatCompletionsRequest } from "../../src/contracts/openai";
+import { RewriteEngineV4 as RewriteEngine } from "../src/modules/rewrite/rewrite-engine-v4";
+import { SqliteMappingStore } from "../src/modules/mapping-store/sqlite-mapping-store";
+import type { ChatCompletionsRequest } from "../src/contracts/openai";
 
 describe("RewriteEngine (V4)", () => {
   let store: SqliteMappingStore;

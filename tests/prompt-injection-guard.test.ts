@@ -3,7 +3,7 @@ import {
   parsePromptInjectionConfig,
   checkPromptInjection,
   type PromptInjectionConfig,
-} from "../../src/shared/prompt-injection-guard";
+} from "../src/shared/prompt-injection-guard";
 
 const enabledConfig: PromptInjectionConfig = { enabled: true, mode: "block", customPatterns: [] };
 const disabledConfig: PromptInjectionConfig = { enabled: false, mode: "warn", customPatterns: [] };

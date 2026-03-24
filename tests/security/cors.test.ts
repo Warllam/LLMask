@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { matchesOrigin, parseCorsConfig } from "../../../src/modules/security/cors";
+import { matchesOrigin, parseCorsConfig } from "../../src/modules/security/cors";
 
 describe("matchesOrigin", () => {
   it("matches exact origin", () => {

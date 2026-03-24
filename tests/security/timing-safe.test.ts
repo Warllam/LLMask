@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { safeCompare, getHardenedTlsOptions } from "../../../src/shared/security-middleware";
+import { safeCompare, getHardenedTlsOptions } from "../../src/shared/security-middleware";
 
 describe("safeCompare (timing-safe string comparison)", () => {
   it("returns true for identical strings", () => {

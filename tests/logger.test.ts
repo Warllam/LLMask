@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { log } from "../../src/shared/logger";
+import { log } from "../src/shared/logger";
 
 describe("Logger", () => {
   const originalEnv = process.env.LOG_LEVEL;

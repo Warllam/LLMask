@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { GeminiAdapter } from "../../src/modules/provider-adapter/gemini-adapter";
+import { GeminiAdapter } from "../src/modules/provider-adapter/gemini-adapter";
 
 describe("GeminiAdapter", () => {
   const adapter = new GeminiAdapter({

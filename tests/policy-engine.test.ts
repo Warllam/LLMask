@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { PolicyEngine } from "../../src/modules/policy/policy-engine";
-import type { DetectionResult } from "../../src/modules/detection/detection-engine";
+import { PolicyEngine } from "../src/modules/policy/policy-engine";
+import type { DetectionResult } from "../src/modules/detection/detection-engine";
 
 describe("PolicyEngine", () => {
   const engine = new PolicyEngine();

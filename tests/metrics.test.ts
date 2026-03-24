@@ -26,7 +26,7 @@ import {
   recordUpstreamLatency,
   recordCacheHit,
   recordCacheMiss,
-} from "../../src/shared/metrics";
+} from "../src/shared/metrics";
 
 describe("Prometheus metrics", () => {
   beforeEach(() => {

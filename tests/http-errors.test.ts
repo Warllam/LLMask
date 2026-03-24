@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { openAiError } from "../../src/shared/http-errors";
+import { openAiError } from "../src/shared/http-errors";
 
 describe("openAiError", () => {
   it("creates error with status code and message", () => {

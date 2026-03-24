@@ -5,7 +5,7 @@ import {
   matchesOrigin,
   validatePromptSize,
   validateContentType,
-} from "../../src/shared/security-middleware";
+} from "../src/shared/security-middleware";
 
 describe("parseSecurityConfig", () => {
   it("returns defaults with empty env", () => {
