@@ -1,0 +1,730 @@
+{
+  "timestamp": "2026-03-24T16:22:10.003Z",
+  "config": {
+    "mode": "direct",
+    "model": "claude-sonnet-4-20250514",
+    "dryRun": false,
+    "strategies": [
+      "aggressive",
+      "values-only",
+      "pii-only",
+      "code-aware"
+    ],
+    "prompts": [
+      "01-velocity-template",
+      "02-python-refactoring",
+      "03-sql-optimization",
+      "04-devops-k8s",
+      "05-code-review",
+      "06-email-pii",
+      "07-mixed-code-pii",
+      "08-js-api-integration"
+    ]
+  },
+  "results": [
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "01-velocity-template",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "01-velocity-template",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "01-velocity-template",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "01-velocity-template",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "02-python-refactoring",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "02-python-refactoring",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "02-python-refactoring",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "02-python-refactoring",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "03-sql-optimization",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "03-sql-optimization",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "03-sql-optimization",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "03-sql-optimization",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "04-devops-k8s",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "04-devops-k8s",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "04-devops-k8s",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "04-devops-k8s",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "05-code-review",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "05-code-review",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "05-code-review",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "05-code-review",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "06-email-pii",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "06-email-pii",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "06-email-pii",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "06-email-pii",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "07-mixed-code-pii",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "07-mixed-code-pii",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "07-mixed-code-pii",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "07-mixed-code-pii",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "08-js-api-integration",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "08-js-api-integration",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "08-js-api-integration",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "08-js-api-integration",
+        "privacy": -1,
+        "semanticPreservation": -1,
+        "responseQuality": -1,
+        "leakageRisk": -1,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": false,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 0,
+      "tokensUsed": 0,
+      "maskedPromptLength": 0,
+      "responseLength": 147
+    }
+  ]
+}

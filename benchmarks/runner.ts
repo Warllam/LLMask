@@ -28,8 +28,24 @@ import {
 
 const BENCHMARK_MODE = process.env.BENCHMARK_MODE || "direct";
 const LLMASK_PROXY_URL = process.env.LLMASK_PROXY_URL || "http://localhost:8787";
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
-const BENCHMARK_MODEL = process.env.BENCHMARK_MODEL || "claude-sonnet-4-20250514";
+import { readFileSync } from "fs";
+import { join } from "path";
+import { homedir } from "os";
+
+function getAnthropicAuth(): { header: string; value: string } {
+  if (process.env.ANTHROPIC_API_KEY) {
+    return { header: "x-api-key", value: process.env.ANTHROPIC_API_KEY };
+  }
+  // Try OAuth token from Claude CLI
+  try {
+    const creds = JSON.parse(readFileSync(join(homedir(), ".claude", ".credentials.json"), "utf-8"));
+    const token = creds?.claudeAiOauth?.accessToken;
+    if (token) return { header: "Authorization", value: `Bearer ${token}` };
+  } catch {}
+  return { header: "", value: "" };
+}
+const anthropicAuth = getAnthropicAuth();
+const BENCHMARK_MODEL = process.env.BENCHMARK_MODEL || "claude-3-haiku-20240307";
 const BENCHMARK_CONCURRENCY = parseInt(process.env.BENCHMARK_CONCURRENCY || "2", 10);
 
 const __benchdir = new URL(".", import.meta.url).pathname;
@@ -108,15 +124,16 @@ async function callLLM(prompt: string): Promise<{ content: string; tokensUsed: n
     };
   } else {
     // Direct Anthropic API
-    if (!ANTHROPIC_API_KEY) {
-      throw new Error("ANTHROPIC_API_KEY required for direct mode. Set BENCHMARK_MODE=proxy to use LLMask proxy.");
+    if (!anthropicAuth.value) {
+      throw new Error("No Anthropic credentials found. Set ANTHROPIC_API_KEY or install Claude CLI (claude) and login.");
     }
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
+        [anthropicAuth.header]: anthropicAuth.value,
         "anthropic-version": "2023-06-01",
+        "anthropic-beta": "claude-code-20250219,oauth-2025-04-20",
       },
       body: JSON.stringify({
         model: BENCHMARK_MODEL,
