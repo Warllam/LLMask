@@ -1,0 +1,2111 @@
+{
+  "timestamp": "2026-03-26T20:26:42.388Z",
+  "config": {
+    "mode": "direct",
+    "model": "claude-3-haiku-20240307",
+    "dryRun": false,
+    "strategies": [
+      "aggressive",
+      "values-only",
+      "pii-only",
+      "code-aware"
+    ],
+    "prompts": [
+      "01-velocity-template",
+      "02-python-refactoring",
+      "03-sql-optimization",
+      "04-devops-k8s",
+      "05-code-review",
+      "06-email-pii",
+      "07-mixed-code-pii",
+      "08-js-api-integration"
+    ]
+  },
+  "results": [
+    {
+      "score": {
+        "strategyId": "baseline",
+        "promptId": "01-velocity-template",
+        "privacy": 0,
+        "semanticPreservation": 100,
+        "responseQuality": 78,
+        "leakageRisk": 100,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [
+            "ContentForge",
+            "PageStream",
+            "cf_articles",
+            "cf_users",
+            "cf_categories",
+            "ps_posts",
+            "ps_creators",
+            "ps_topics",
+            "contentForge"
+          ],
+          "expectedElementsFound": [
+            "headline",
+            "url_path",
+            "content_blocks",
+            "creator_id",
+            "topic_id",
+            "publish_date",
+            "workflow_state",
+            "full_name",
+            "profile_image_url",
+            "topic_title",
+            "topic_slug",
+            "pageStream",
+            "#set",
+            "<article"
+          ],
+          "expectedElementsMissing": [
+            "ps_posts",
+            "ps_creators",
+            "ps_topics",
+            "cf-breadcrumb"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 5104,
+      "tokensUsed": 1743,
+      "maskedPromptLength": 3101,
+      "responseLength": 2248
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "01-velocity-template",
+        "privacy": 100,
+        "semanticPreservation": 93,
+        "responseQuality": 78,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "ContentForge",
+            "PageStream",
+            "cf_articles",
+            "cf_users",
+            "cf_categories",
+            "ps_posts",
+            "ps_creators",
+            "ps_topics",
+            "contentForge"
+          ],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [
+            "headline",
+            "url_path",
+            "content_blocks",
+            "creator_id",
+            "topic_id",
+            "publish_date",
+            "workflow_state",
+            "full_name",
+            "profile_image_url",
+            "topic_title",
+            "topic_slug",
+            "#set",
+            "<article",
+            "cf-breadcrumb"
+          ],
+          "expectedElementsMissing": [
+            "ps_posts",
+            "ps_creators",
+            "ps_topics",
+            "pageStream"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "CLS_BRAVO",
+            "CLS_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 6138,
+      "tokensUsed": 1853,
+      "maskedPromptLength": 3076,
+      "responseLength": 2426
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "01-velocity-template",
+        "privacy": 0,
+        "semanticPreservation": 100,
+        "responseQuality": 78,
+        "leakageRisk": 33,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [
+            "ContentForge",
+            "PageStream",
+            "cf_articles",
+            "cf_users",
+            "cf_categories",
+            "ps_posts",
+            "ps_creators",
+            "ps_topics",
+            "contentForge"
+          ],
+          "expectedElementsFound": [
+            "headline",
+            "url_path",
+            "content_blocks",
+            "creator_id",
+            "topic_id",
+            "publish_date",
+            "workflow_state",
+            "full_name",
+            "profile_image_url",
+            "topic_title",
+            "topic_slug",
+            "pageStream",
+            "#set",
+            "<article"
+          ],
+          "expectedElementsMissing": [
+            "ps_posts",
+            "ps_creators",
+            "ps_topics",
+            "cf-breadcrumb"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 9470,
+      "tokensUsed": 1708,
+      "maskedPromptLength": 3101,
+      "responseLength": 2154
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "01-velocity-template",
+        "privacy": 0,
+        "semanticPreservation": 100,
+        "responseQuality": 78,
+        "leakageRisk": 33,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [
+            "ContentForge",
+            "PageStream",
+            "cf_articles",
+            "cf_users",
+            "cf_categories",
+            "ps_posts",
+            "ps_creators",
+            "ps_topics",
+            "contentForge"
+          ],
+          "expectedElementsFound": [
+            "headline",
+            "url_path",
+            "content_blocks",
+            "creator_id",
+            "topic_id",
+            "publish_date",
+            "workflow_state",
+            "full_name",
+            "profile_image_url",
+            "topic_title",
+            "topic_slug",
+            "pageStream",
+            "#set",
+            "<article"
+          ],
+          "expectedElementsMissing": [
+            "ps_posts",
+            "ps_creators",
+            "ps_topics",
+            "cf-breadcrumb"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 5599,
+      "tokensUsed": 1716,
+      "maskedPromptLength": 3101,
+      "responseLength": 2178
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "01-velocity-template",
+        "privacy": 11,
+        "semanticPreservation": 85,
+        "responseQuality": 89,
+        "leakageRisk": 56,
+        "details": {
+          "sensitiveElementsMasked": [
+            "PageStream"
+          ],
+          "sensitiveElementsLeaked": [
+            "ContentForge",
+            "cf_articles",
+            "cf_users",
+            "cf_categories",
+            "ps_posts",
+            "ps_creators",
+            "ps_topics",
+            "contentForge"
+          ],
+          "expectedElementsFound": [
+            "ps_posts",
+            "ps_creators",
+            "ps_topics",
+            "headline",
+            "url_path",
+            "content_blocks",
+            "creator_id",
+            "topic_id",
+            "publish_date",
+            "workflow_state",
+            "full_name",
+            "profile_image_url",
+            "topic_title",
+            "topic_slug",
+            "#set",
+            "<article"
+          ],
+          "expectedElementsMissing": [
+            "pageStream",
+            "cf-breadcrumb"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "CLS_BRAVO"
+          ]
+        }
+      },
+      "latencyMs": 5684,
+      "tokensUsed": 1754,
+      "maskedPromptLength": 3096,
+      "responseLength": 2174
+    },
+    {
+      "score": {
+        "strategyId": "baseline",
+        "promptId": "02-python-refactoring",
+        "privacy": 0,
+        "semanticPreservation": 100,
+        "responseQuality": 100,
+        "leakageRisk": 100,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [
+            "Nexova Technologies",
+            "Nexova",
+            "84726391500014",
+            "FR12847263915",
+            "42 Rue de la Paix, 75002 Paris, France",
+            "FR76 3000 6000 0112 3456 7890 189",
+            "NXV-"
+          ],
+          "expectedElementsFound": [
+            "InvoiceGenerationService",
+            "NexovaBillingManager",
+            "generate_invoice",
+            "line_items",
+            "subtotal",
+            "tax_rate",
+            "NexovaTransaction",
+            "NexovaInvoice",
+            "NexovaLineItem",
+            "def ",
+            "class ",
+            "__init__",
+            "self.db"
+          ],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 10999,
+      "tokensUsed": 3017,
+      "maskedPromptLength": 4370,
+      "responseLength": 5456
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "02-python-refactoring",
+        "privacy": 100,
+        "semanticPreservation": 78,
+        "responseQuality": 69,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Nexova Technologies",
+            "Nexova",
+            "84726391500014",
+            "FR12847263915",
+            "42 Rue de la Paix, 75002 Paris, France",
+            "FR76 3000 6000 0112 3456 7890 189",
+            "NXV-"
+          ],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [
+            "InvoiceGenerationService",
+            "generate_invoice",
+            "line_items",
+            "subtotal",
+            "tax_rate",
+            "def ",
+            "class ",
+            "__init__",
+            "self.db"
+          ],
+          "expectedElementsMissing": [
+            "NexovaBillingManager",
+            "NexovaTransaction",
+            "NexovaInvoice",
+            "NexovaLineItem"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "ORG_BRAVO",
+            "ORG_BRAVODB",
+            "TEL_ALPHA",
+            "ORG_ALPHA",
+            "ORG_CHARLIE"
+          ]
+        }
+      },
+      "latencyMs": 11861,
+      "tokensUsed": 3315,
+      "maskedPromptLength": 4439,
+      "responseLength": 5346
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "02-python-refactoring",
+        "privacy": 100,
+        "semanticPreservation": 78,
+        "responseQuality": 69,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Nexova Technologies",
+            "Nexova",
+            "84726391500014",
+            "FR12847263915",
+            "42 Rue de la Paix, 75002 Paris, France",
+            "FR76 3000 6000 0112 3456 7890 189",
+            "NXV-"
+          ],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [
+            "InvoiceGenerationService",
+            "generate_invoice",
+            "line_items",
+            "subtotal",
+            "tax_rate",
+            "def ",
+            "class ",
+            "__init__",
+            "self.db"
+          ],
+          "expectedElementsMissing": [
+            "NexovaBillingManager",
+            "NexovaTransaction",
+            "NexovaInvoice",
+            "NexovaLineItem"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "ORG_BRAVO",
+            "ORG_BRAVODB",
+            "TEL_ALPHA",
+            "ORG_ALPHA",
+            "ORG_CHARLIE"
+          ]
+        }
+      },
+      "latencyMs": 12007,
+      "tokensUsed": 3364,
+      "maskedPromptLength": 4439,
+      "responseLength": 5454
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "02-python-refactoring",
+        "privacy": 57,
+        "semanticPreservation": 69,
+        "responseQuality": 100,
+        "leakageRisk": 43,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Nexova Technologies",
+            "84726391500014",
+            "42 Rue de la Paix, 75002 Paris, France",
+            "FR76 3000 6000 0112 3456 7890 189"
+          ],
+          "sensitiveElementsLeaked": [
+            "Nexova",
+            "FR12847263915",
+            "NXV-"
+          ],
+          "expectedElementsFound": [
+            "InvoiceGenerationService",
+            "NexovaBillingManager",
+            "generate_invoice",
+            "line_items",
+            "subtotal",
+            "tax_rate",
+            "NexovaTransaction",
+            "NexovaInvoice",
+            "NexovaLineItem",
+            "def ",
+            "class ",
+            "__init__",
+            "self.db"
+          ],
+          "expectedElementsMissing": [],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "TEL_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 12820,
+      "tokensUsed": 2998,
+      "maskedPromptLength": 4304,
+      "responseLength": 5538
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "02-python-refactoring",
+        "privacy": 57,
+        "semanticPreservation": 69,
+        "responseQuality": 92,
+        "leakageRisk": 43,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Nexova Technologies",
+            "84726391500014",
+            "42 Rue de la Paix, 75002 Paris, France",
+            "FR76 3000 6000 0112 3456 7890 189"
+          ],
+          "sensitiveElementsLeaked": [
+            "Nexova",
+            "FR12847263915",
+            "NXV-"
+          ],
+          "expectedElementsFound": [
+            "InvoiceGenerationService",
+            "generate_invoice",
+            "line_items",
+            "subtotal",
+            "tax_rate",
+            "NexovaTransaction",
+            "NexovaInvoice",
+            "NexovaLineItem",
+            "def ",
+            "class ",
+            "__init__",
+            "self.db"
+          ],
+          "expectedElementsMissing": [
+            "NexovaBillingManager"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "ORG_ALPHA",
+            "TEL_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 13527,
+      "tokensUsed": 3150,
+      "maskedPromptLength": 4310,
+      "responseLength": 5905
+    },
+    {
+      "score": {
+        "strategyId": "baseline",
+        "promptId": "03-sql-optimization",
+        "privacy": 0,
+        "semanticPreservation": 100,
+        "responseQuality": 82,
+        "leakageRisk": 100,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [
+            "Meridian Health Systems",
+            "MHS-MAIN",
+            "MHS-NORTH",
+            "MHS-SOUTH",
+            "patient_mrn",
+            "insurance_policy_number",
+            "patient_first_name",
+            "patient_last_name",
+            "provider_npi",
+            "date_of_birth"
+          ],
+          "expectedElementsFound": [
+            "CREATE INDEX",
+            "mhs_diagnoses",
+            "mhs_patient_encounters",
+            "encounter_id",
+            "icd10_code",
+            "facility_code",
+            "WHERE",
+            "JOIN",
+            "EXPLAIN"
+          ],
+          "expectedElementsMissing": [
+            "covering index",
+            "composite index"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 9637,
+      "tokensUsed": 1688,
+      "maskedPromptLength": 1796,
+      "responseLength": 3551
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "03-sql-optimization",
+        "privacy": 100,
+        "semanticPreservation": 72,
+        "responseQuality": 82,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Meridian Health Systems",
+            "MHS-MAIN",
+            "MHS-NORTH",
+            "MHS-SOUTH",
+            "patient_mrn",
+            "insurance_policy_number",
+            "patient_first_name",
+            "patient_last_name",
+            "provider_npi",
+            "date_of_birth"
+          ],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [
+            "CREATE INDEX",
+            "mhs_diagnoses",
+            "mhs_patient_encounters",
+            "encounter_id",
+            "icd10_code",
+            "facility_code",
+            "composite index",
+            "WHERE",
+            "JOIN"
+          ],
+          "expectedElementsMissing": [
+            "covering index",
+            "EXPLAIN"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "COL_FOXTROT",
+            "COL_BRAVO",
+            "COL_CHARLIE",
+            "COL_DELTA",
+            "COL_ALPHA",
+            "COL_ECHO",
+            "TEL_BRAVO",
+            "TEL_ALPHA",
+            "ORG_CHARLIE",
+            "ORG_ALPHA",
+            "ORG_BRAVO"
+          ]
+        }
+      },
+      "latencyMs": 6959,
+      "tokensUsed": 1570,
+      "maskedPromptLength": 1740,
+      "responseLength": 2826
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "03-sql-optimization",
+        "privacy": 40,
+        "semanticPreservation": 70,
+        "responseQuality": 82,
+        "leakageRisk": 60,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Meridian Health Systems",
+            "MHS-MAIN",
+            "MHS-NORTH",
+            "MHS-SOUTH"
+          ],
+          "sensitiveElementsLeaked": [
+            "patient_mrn",
+            "insurance_policy_number",
+            "patient_first_name",
+            "patient_last_name",
+            "provider_npi",
+            "date_of_birth"
+          ],
+          "expectedElementsFound": [
+            "CREATE INDEX",
+            "mhs_diagnoses",
+            "mhs_patient_encounters",
+            "encounter_id",
+            "icd10_code",
+            "facility_code",
+            "WHERE",
+            "JOIN",
+            "EXPLAIN"
+          ],
+          "expectedElementsMissing": [
+            "covering index",
+            "composite index"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "ORG_CHARLIE",
+            "ORG_ALPHA",
+            "ORG_BRAVO"
+          ]
+        }
+      },
+      "latencyMs": 7384,
+      "tokensUsed": 1615,
+      "maskedPromptLength": 1785,
+      "responseLength": 3132
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "03-sql-optimization",
+        "privacy": 10,
+        "semanticPreservation": 70,
+        "responseQuality": 82,
+        "leakageRisk": 90,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Meridian Health Systems"
+          ],
+          "sensitiveElementsLeaked": [
+            "MHS-MAIN",
+            "MHS-NORTH",
+            "MHS-SOUTH",
+            "patient_mrn",
+            "insurance_policy_number",
+            "patient_first_name",
+            "patient_last_name",
+            "provider_npi",
+            "date_of_birth"
+          ],
+          "expectedElementsFound": [
+            "CREATE INDEX",
+            "mhs_diagnoses",
+            "mhs_patient_encounters",
+            "encounter_id",
+            "icd10_code",
+            "facility_code",
+            "WHERE",
+            "JOIN",
+            "EXPLAIN"
+          ],
+          "expectedElementsMissing": [
+            "covering index",
+            "composite index"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 7066,
+      "tokensUsed": 1554,
+      "maskedPromptLength": 1782,
+      "responseLength": 2766
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "03-sql-optimization",
+        "privacy": 20,
+        "semanticPreservation": 70,
+        "responseQuality": 82,
+        "leakageRisk": 80,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Meridian Health Systems",
+            "patient_mrn"
+          ],
+          "sensitiveElementsLeaked": [
+            "MHS-MAIN",
+            "MHS-NORTH",
+            "MHS-SOUTH",
+            "insurance_policy_number",
+            "patient_first_name",
+            "patient_last_name",
+            "provider_npi",
+            "date_of_birth"
+          ],
+          "expectedElementsFound": [
+            "CREATE INDEX",
+            "mhs_diagnoses",
+            "mhs_patient_encounters",
+            "encounter_id",
+            "icd10_code",
+            "facility_code",
+            "WHERE",
+            "JOIN",
+            "EXPLAIN"
+          ],
+          "expectedElementsMissing": [
+            "covering index",
+            "composite index"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "COL_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 6434,
+      "tokensUsed": 1585,
+      "maskedPromptLength": 1780,
+      "responseLength": 2885
+    },
+    {
+      "score": {
+        "strategyId": "baseline",
+        "promptId": "04-devops-k8s",
+        "privacy": 0,
+        "semanticPreservation": 100,
+        "responseQuality": 57,
+        "leakageRisk": 100,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [
+            "velantis",
+            "Velantis",
+            "registry.velantis.internal:5000",
+            "db-master.velantis.internal",
+            "redis-cluster.velantis.internal",
+            "kafka-0.velantis.internal",
+            "kafka-1.velantis.internal",
+            "kafka-2.velantis.internal",
+            "vault.velantis.internal",
+            "api.velantis-payments.internal",
+            "svc_orders:Pr0d$ecret!2024",
+            "r3d1s_s3cr3t",
+            "hvs.CAESIJmKn8GDjhFz_placeholder_token_xYz",
+            "eu01xx4a7b3c9d2e1f0placeholder123456NRAL",
+            "pk_prod_Vel4nt1s_placeholder_key_2024",
+            "192.168.",
+            "10.0."
+          ],
+          "expectedElementsFound": [
+            "memory",
+            "limits",
+            "Xmx",
+            "OOMKilled",
+            "Kafka",
+            "consumer",
+            "connection pool",
+            "1Gi"
+          ],
+          "expectedElementsMissing": [
+            "resources",
+            "buffer",
+            "heap",
+            "Secret",
+            "ConfigMap",
+            "env"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 4572,
+      "tokensUsed": 1591,
+      "maskedPromptLength": 2867,
+      "responseLength": 3025
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "04-devops-k8s",
+        "privacy": 100,
+        "semanticPreservation": 70,
+        "responseQuality": 71,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "velantis",
+            "Velantis",
+            "registry.velantis.internal:5000",
+            "db-master.velantis.internal",
+            "redis-cluster.velantis.internal",
+            "kafka-0.velantis.internal",
+            "kafka-1.velantis.internal",
+            "kafka-2.velantis.internal",
+            "vault.velantis.internal",
+            "api.velantis-payments.internal",
+            "svc_orders:Pr0d$ecret!2024",
+            "r3d1s_s3cr3t",
+            "hvs.CAESIJmKn8GDjhFz_placeholder_token_xYz",
+            "eu01xx4a7b3c9d2e1f0placeholder123456NRAL",
+            "pk_prod_Vel4nt1s_placeholder_key_2024",
+            "192.168.",
+            "10.0."
+          ],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [
+            "memory",
+            "limits",
+            "Xmx",
+            "OOMKilled",
+            "resources",
+            "Kafka",
+            "consumer",
+            "connection pool",
+            "1Gi",
+            "heap"
+          ],
+          "expectedElementsMissing": [
+            "buffer",
+            "Secret",
+            "ConfigMap",
+            "env"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 5450,
+      "tokensUsed": 1504,
+      "maskedPromptLength": 2590,
+      "responseLength": 2824
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "04-devops-k8s",
+        "privacy": 94,
+        "semanticPreservation": 100,
+        "responseQuality": 79,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "velantis",
+            "Velantis",
+            "registry.velantis.internal:5000",
+            "db-master.velantis.internal",
+            "redis-cluster.velantis.internal",
+            "kafka-0.velantis.internal",
+            "kafka-1.velantis.internal",
+            "kafka-2.velantis.internal",
+            "vault.velantis.internal",
+            "api.velantis-payments.internal",
+            "svc_orders:Pr0d$ecret!2024",
+            "r3d1s_s3cr3t",
+            "hvs.CAESIJmKn8GDjhFz_placeholder_token_xYz",
+            "pk_prod_Vel4nt1s_placeholder_key_2024",
+            "192.168.",
+            "10.0."
+          ],
+          "sensitiveElementsLeaked": [
+            "eu01xx4a7b3c9d2e1f0placeholder123456NRAL"
+          ],
+          "expectedElementsFound": [
+            "memory",
+            "limits",
+            "Xmx",
+            "OOMKilled",
+            "resources",
+            "Kafka",
+            "consumer",
+            "buffer",
+            "connection pool",
+            "1Gi",
+            "heap"
+          ],
+          "expectedElementsMissing": [
+            "Secret",
+            "ConfigMap",
+            "env"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 6016,
+      "tokensUsed": 1597,
+      "maskedPromptLength": 2653,
+      "responseLength": 3196
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "04-devops-k8s",
+        "privacy": 24,
+        "semanticPreservation": 100,
+        "responseQuality": 71,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "hvs.CAESIJmKn8GDjhFz_placeholder_token_xYz",
+            "pk_prod_Vel4nt1s_placeholder_key_2024",
+            "192.168.",
+            "10.0."
+          ],
+          "sensitiveElementsLeaked": [
+            "velantis",
+            "Velantis",
+            "registry.velantis.internal:5000",
+            "db-master.velantis.internal",
+            "redis-cluster.velantis.internal",
+            "kafka-0.velantis.internal",
+            "kafka-1.velantis.internal",
+            "kafka-2.velantis.internal",
+            "vault.velantis.internal",
+            "api.velantis-payments.internal",
+            "svc_orders:Pr0d$ecret!2024",
+            "r3d1s_s3cr3t",
+            "eu01xx4a7b3c9d2e1f0placeholder123456NRAL"
+          ],
+          "expectedElementsFound": [
+            "memory",
+            "limits",
+            "Xmx",
+            "resources",
+            "Kafka",
+            "consumer",
+            "buffer",
+            "connection pool",
+            "1Gi",
+            "heap"
+          ],
+          "expectedElementsMissing": [
+            "OOMKilled",
+            "Secret",
+            "ConfigMap",
+            "env"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 5393,
+      "tokensUsed": 1635,
+      "maskedPromptLength": 2806,
+      "responseLength": 3279
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "04-devops-k8s",
+        "privacy": 24,
+        "semanticPreservation": 100,
+        "responseQuality": 57,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "hvs.CAESIJmKn8GDjhFz_placeholder_token_xYz",
+            "pk_prod_Vel4nt1s_placeholder_key_2024",
+            "192.168.",
+            "10.0."
+          ],
+          "sensitiveElementsLeaked": [
+            "velantis",
+            "Velantis",
+            "registry.velantis.internal:5000",
+            "db-master.velantis.internal",
+            "redis-cluster.velantis.internal",
+            "kafka-0.velantis.internal",
+            "kafka-1.velantis.internal",
+            "kafka-2.velantis.internal",
+            "vault.velantis.internal",
+            "api.velantis-payments.internal",
+            "svc_orders:Pr0d$ecret!2024",
+            "r3d1s_s3cr3t",
+            "eu01xx4a7b3c9d2e1f0placeholder123456NRAL"
+          ],
+          "expectedElementsFound": [
+            "memory",
+            "limits",
+            "OOMKilled",
+            "resources",
+            "Kafka",
+            "consumer",
+            "connection pool",
+            "env"
+          ],
+          "expectedElementsMissing": [
+            "Xmx",
+            "buffer",
+            "1Gi",
+            "heap",
+            "Secret",
+            "ConfigMap"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 5583,
+      "tokensUsed": 1643,
+      "maskedPromptLength": 2806,
+      "responseLength": 2929
+    },
+    {
+      "score": {
+        "strategyId": "baseline",
+        "promptId": "05-code-review",
+        "privacy": 0,
+        "semanticPreservation": 100,
+        "responseQuality": 69,
+        "leakageRisk": 100,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [
+            "Cyberix Labs",
+            "cyberix",
+            "Cyberix",
+            "github.com/cyberix-labs/platform"
+          ],
+          "expectedElementsFound": [
+            "mutex",
+            "totalScore",
+            "totalWeight",
+            "errs",
+            "matches",
+            "goroutine",
+            "cache",
+            "context",
+            "persistScore",
+            "error handling",
+            "totalWeight"
+          ],
+          "expectedElementsMissing": [
+            "race condition",
+            "data race",
+            "sync.Mutex",
+            "unbounded",
+            "divide by zero"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 12136,
+      "tokensUsed": 2960,
+      "maskedPromptLength": 3455,
+      "responseLength": 5850
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "05-code-review",
+        "privacy": 100,
+        "semanticPreservation": 85,
+        "responseQuality": 44,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Cyberix Labs",
+            "cyberix",
+            "Cyberix",
+            "github.com/cyberix-labs/platform"
+          ],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [
+            "race condition",
+            "mutex",
+            "sync.Mutex",
+            "goroutine",
+            "cache",
+            "persistScore",
+            "error handling"
+          ],
+          "expectedElementsMissing": [
+            "data race",
+            "totalScore",
+            "totalWeight",
+            "errs",
+            "matches",
+            "unbounded",
+            "context",
+            "divide by zero",
+            "totalWeight"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 5740,
+      "tokensUsed": 2100,
+      "maskedPromptLength": 3475,
+      "responseLength": 3170
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "05-code-review",
+        "privacy": 100,
+        "semanticPreservation": 80,
+        "responseQuality": 63,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Cyberix Labs",
+            "cyberix",
+            "Cyberix",
+            "github.com/cyberix-labs/platform"
+          ],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [
+            "race condition",
+            "mutex",
+            "sync.Mutex",
+            "matches",
+            "goroutine",
+            "cache",
+            "unbounded",
+            "context",
+            "persistScore",
+            "error handling"
+          ],
+          "expectedElementsMissing": [
+            "data race",
+            "totalScore",
+            "totalWeight",
+            "errs",
+            "divide by zero",
+            "totalWeight"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "PER_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 7220,
+      "tokensUsed": 2280,
+      "maskedPromptLength": 3475,
+      "responseLength": 3545
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "05-code-review",
+        "privacy": 25,
+        "semanticPreservation": 70,
+        "responseQuality": 63,
+        "leakageRisk": 50,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Cyberix Labs"
+          ],
+          "sensitiveElementsLeaked": [
+            "cyberix",
+            "Cyberix",
+            "github.com/cyberix-labs/platform"
+          ],
+          "expectedElementsFound": [
+            "race condition",
+            "mutex",
+            "totalScore",
+            "totalWeight",
+            "errs",
+            "goroutine",
+            "cache",
+            "persistScore",
+            "error handling",
+            "totalWeight"
+          ],
+          "expectedElementsMissing": [
+            "data race",
+            "sync.Mutex",
+            "matches",
+            "unbounded",
+            "context",
+            "divide by zero"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 6351,
+      "tokensUsed": 2029,
+      "maskedPromptLength": 3452,
+      "responseLength": 3312
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "05-code-review",
+        "privacy": 25,
+        "semanticPreservation": 70,
+        "responseQuality": 63,
+        "leakageRisk": 50,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Cyberix Labs"
+          ],
+          "sensitiveElementsLeaked": [
+            "cyberix",
+            "Cyberix",
+            "github.com/cyberix-labs/platform"
+          ],
+          "expectedElementsFound": [
+            "race condition",
+            "data race",
+            "mutex",
+            "sync.Mutex",
+            "errs",
+            "matches",
+            "goroutine",
+            "cache",
+            "persistScore",
+            "error handling"
+          ],
+          "expectedElementsMissing": [
+            "totalScore",
+            "totalWeight",
+            "unbounded",
+            "context",
+            "divide by zero",
+            "totalWeight"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "PER_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 5263,
+      "tokensUsed": 2078,
+      "maskedPromptLength": 3452,
+      "responseLength": 3497
+    },
+    {
+      "score": {
+        "strategyId": "baseline",
+        "promptId": "06-email-pii",
+        "privacy": 0,
+        "semanticPreservation": 100,
+        "responseQuality": 92,
+        "leakageRisk": 100,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [
+            "Sophie Marchand",
+            "sophie.marchand@luminex-group.fr",
+            "Jean-Pierre DELACROIX",
+            "jp.delacroix@airbus.com",
+            "+33 6 12 34 56 78",
+            "88 Avenue des Champs-Élysées, 75008 Paris",
+            "LFG-2024-JP-00847",
+            "€2.4M",
+            "FR0014003B15",
+            "FR76 1234 5678 9012 3456 7890 123",
+            "1 85 12 75 120 001 83",
+            "Marie FONTAINE",
+            "m.fontaine@luminex-group.fr",
+            "Luminex Financial Group",
+            "luminex-group.fr",
+            "airbus.com"
+          ],
+          "expectedElementsFound": [
+            "Subject:",
+            "Dear",
+            "portfolio",
+            "restructuring",
+            "Growth Fund",
+            "meeting",
+            "March 15",
+            "April 2",
+            "transfer",
+            "compliance",
+            "Best regards"
+          ],
+          "expectedElementsMissing": [
+            "CC:"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 2377,
+      "tokensUsed": 599,
+      "maskedPromptLength": 920,
+      "responseLength": 1052
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "06-email-pii",
+        "privacy": 100,
+        "semanticPreservation": 64,
+        "responseQuality": 92,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Sophie Marchand",
+            "sophie.marchand@luminex-group.fr",
+            "Jean-Pierre DELACROIX",
+            "jp.delacroix@airbus.com",
+            "+33 6 12 34 56 78",
+            "88 Avenue des Champs-Élysées, 75008 Paris",
+            "LFG-2024-JP-00847",
+            "€2.4M",
+            "FR0014003B15",
+            "FR76 1234 5678 9012 3456 7890 123",
+            "1 85 12 75 120 001 83",
+            "Marie FONTAINE",
+            "m.fontaine@luminex-group.fr",
+            "Luminex Financial Group",
+            "luminex-group.fr",
+            "airbus.com"
+          ],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [
+            "Subject:",
+            "Dear",
+            "portfolio",
+            "restructuring",
+            "Growth Fund",
+            "meeting",
+            "March 15",
+            "April 2",
+            "transfer",
+            "compliance",
+            "Best regards"
+          ],
+          "expectedElementsMissing": [
+            "CC:"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "PER_BRAVO",
+            "ORG_BRAVO",
+            "ORG_ALPHA",
+            "TEL_ALPHA",
+            "PER_DELTA",
+            "MAIL_BRAVO",
+            "PER_ALPHA",
+            "MAIL_ALPHA",
+            "PER_CHARLIE"
+          ]
+        }
+      },
+      "latencyMs": 2587,
+      "tokensUsed": 547,
+      "maskedPromptLength": 754,
+      "responseLength": 1069
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "06-email-pii",
+        "privacy": 100,
+        "semanticPreservation": 64,
+        "responseQuality": 92,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Sophie Marchand",
+            "sophie.marchand@luminex-group.fr",
+            "Jean-Pierre DELACROIX",
+            "jp.delacroix@airbus.com",
+            "+33 6 12 34 56 78",
+            "88 Avenue des Champs-Élysées, 75008 Paris",
+            "LFG-2024-JP-00847",
+            "€2.4M",
+            "FR0014003B15",
+            "FR76 1234 5678 9012 3456 7890 123",
+            "1 85 12 75 120 001 83",
+            "Marie FONTAINE",
+            "m.fontaine@luminex-group.fr",
+            "Luminex Financial Group",
+            "luminex-group.fr",
+            "airbus.com"
+          ],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [
+            "Subject:",
+            "Dear",
+            "portfolio",
+            "restructuring",
+            "Growth Fund",
+            "meeting",
+            "March 15",
+            "April 2",
+            "transfer",
+            "compliance",
+            "Best regards"
+          ],
+          "expectedElementsMissing": [
+            "CC:"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "PER_BRAVO",
+            "ORG_BRAVO",
+            "ORG_ALPHA",
+            "TEL_ALPHA",
+            "PER_DELTA",
+            "MAIL_BRAVO",
+            "PER_CHARLIE",
+            "PER_ALPHA",
+            "MAIL_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 2214,
+      "tokensUsed": 512,
+      "maskedPromptLength": 754,
+      "responseLength": 920
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "06-email-pii",
+        "privacy": 81,
+        "semanticPreservation": 64,
+        "responseQuality": 92,
+        "leakageRisk": 19,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Sophie Marchand",
+            "sophie.marchand@luminex-group.fr",
+            "Jean-Pierre DELACROIX",
+            "jp.delacroix@airbus.com",
+            "+33 6 12 34 56 78",
+            "88 Avenue des Champs-Élysées, 75008 Paris",
+            "FR76 1234 5678 9012 3456 7890 123",
+            "1 85 12 75 120 001 83",
+            "Marie FONTAINE",
+            "m.fontaine@luminex-group.fr",
+            "Luminex Financial Group",
+            "luminex-group.fr",
+            "airbus.com"
+          ],
+          "sensitiveElementsLeaked": [
+            "LFG-2024-JP-00847",
+            "€2.4M",
+            "FR0014003B15"
+          ],
+          "expectedElementsFound": [
+            "Subject:",
+            "Dear",
+            "portfolio",
+            "restructuring",
+            "Growth Fund",
+            "meeting",
+            "March 15",
+            "April 2",
+            "transfer",
+            "compliance",
+            "Best regards"
+          ],
+          "expectedElementsMissing": [
+            "CC:"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "TEL_ALPHA",
+            "MAIL_BRAVO",
+            "PER_CHARLIE",
+            "PER_ALPHA",
+            "MAIL_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 2551,
+      "tokensUsed": 547,
+      "maskedPromptLength": 761,
+      "responseLength": 1112
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "06-email-pii",
+        "privacy": 100,
+        "semanticPreservation": 64,
+        "responseQuality": 92,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Sophie Marchand",
+            "sophie.marchand@luminex-group.fr",
+            "Jean-Pierre DELACROIX",
+            "jp.delacroix@airbus.com",
+            "+33 6 12 34 56 78",
+            "88 Avenue des Champs-Élysées, 75008 Paris",
+            "LFG-2024-JP-00847",
+            "€2.4M",
+            "FR0014003B15",
+            "FR76 1234 5678 9012 3456 7890 123",
+            "1 85 12 75 120 001 83",
+            "Marie FONTAINE",
+            "m.fontaine@luminex-group.fr",
+            "Luminex Financial Group",
+            "luminex-group.fr",
+            "airbus.com"
+          ],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [
+            "Subject:",
+            "Dear",
+            "portfolio",
+            "restructuring",
+            "Growth Fund",
+            "meeting",
+            "March 15",
+            "April 2",
+            "transfer",
+            "compliance",
+            "Best regards"
+          ],
+          "expectedElementsMissing": [
+            "CC:"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "ORG_BRAVO",
+            "ORG_ALPHA",
+            "TEL_ALPHA",
+            "PER_DELTA",
+            "MAIL_BRAVO",
+            "PER_CHARLIE",
+            "PER_ALPHA",
+            "MAIL_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 2269,
+      "tokensUsed": 503,
+      "maskedPromptLength": 754,
+      "responseLength": 903
+    },
+    {
+      "score": {
+        "strategyId": "baseline",
+        "promptId": "07-mixed-code-pii",
+        "privacy": 0,
+        "semanticPreservation": 100,
+        "responseQuality": 79,
+        "leakageRisk": 100,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [
+            "oravion",
+            "Oravion",
+            "oravion-cloud.internal",
+            "AKIAIOSFODNN7EXAMPLE",
+            "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+            "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+            "oravion-gdpr-exports",
+            "marc.duval@gmail.com",
+            "Marc DUVAL",
+            "+33 6 98 76 54 32",
+            "1 90 03 75 108 234 56",
+            "Thomas Lefèvre",
+            "thomas.lefevre@oravion.com"
+          ],
+          "expectedElementsFound": [
+            "GDPR",
+            "encryption",
+            "AES",
+            "S3",
+            "exportUserData",
+            "OravionUserProfile",
+            "audit log",
+            "consent",
+            "loginHistory",
+            "paymentMethods",
+            "nationalId"
+          ],
+          "expectedElementsMissing": [
+            "PrismaClient",
+            "right to access",
+            "data portability"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 10317,
+      "tokensUsed": 2809,
+      "maskedPromptLength": 3589,
+      "responseLength": 5852
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "07-mixed-code-pii",
+        "privacy": 100,
+        "semanticPreservation": 69,
+        "responseQuality": 50,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "oravion",
+            "Oravion",
+            "oravion-cloud.internal",
+            "AKIAIOSFODNN7EXAMPLE",
+            "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+            "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+            "oravion-gdpr-exports",
+            "marc.duval@gmail.com",
+            "Marc DUVAL",
+            "+33 6 98 76 54 32",
+            "1 90 03 75 108 234 56",
+            "Thomas Lefèvre",
+            "thomas.lefevre@oravion.com"
+          ],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [
+            "GDPR",
+            "encryption",
+            "AES",
+            "S3",
+            "exportUserData",
+            "audit log",
+            "consent"
+          ],
+          "expectedElementsMissing": [
+            "PrismaClient",
+            "OravionUserProfile",
+            "right to access",
+            "data portability",
+            "loginHistory",
+            "paymentMethods",
+            "nationalId"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "PER_ALPHA",
+            "MAIL_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 4748,
+      "tokensUsed": 1834,
+      "maskedPromptLength": 3470,
+      "responseLength": 2554
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "07-mixed-code-pii",
+        "privacy": 92,
+        "semanticPreservation": 69,
+        "responseQuality": 43,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "oravion",
+            "Oravion",
+            "oravion-cloud.internal",
+            "AKIAIOSFODNN7EXAMPLE",
+            "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+            "oravion-gdpr-exports",
+            "marc.duval@gmail.com",
+            "Marc DUVAL",
+            "+33 6 98 76 54 32",
+            "1 90 03 75 108 234 56",
+            "Thomas Lefèvre",
+            "thomas.lefevre@oravion.com"
+          ],
+          "sensitiveElementsLeaked": [
+            "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+          ],
+          "expectedElementsFound": [
+            "GDPR",
+            "encryption",
+            "AES",
+            "S3",
+            "exportUserData",
+            "consent"
+          ],
+          "expectedElementsMissing": [
+            "PrismaClient",
+            "OravionUserProfile",
+            "audit log",
+            "right to access",
+            "data portability",
+            "loginHistory",
+            "paymentMethods",
+            "nationalId"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "PER_ALPHA",
+            "MAIL_ALPHA",
+            "ORG_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 5775,
+      "tokensUsed": 1979,
+      "maskedPromptLength": 3492,
+      "responseLength": 2977
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "07-mixed-code-pii",
+        "privacy": 54,
+        "semanticPreservation": 69,
+        "responseQuality": 57,
+        "leakageRisk": 15,
+        "details": {
+          "sensitiveElementsMasked": [
+            "AKIAIOSFODNN7EXAMPLE",
+            "marc.duval@gmail.com",
+            "Marc DUVAL",
+            "+33 6 98 76 54 32",
+            "1 90 03 75 108 234 56",
+            "Thomas Lefèvre",
+            "thomas.lefevre@oravion.com"
+          ],
+          "sensitiveElementsLeaked": [
+            "oravion",
+            "Oravion",
+            "oravion-cloud.internal",
+            "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+            "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+            "oravion-gdpr-exports"
+          ],
+          "expectedElementsFound": [
+            "GDPR",
+            "encryption",
+            "AES",
+            "S3",
+            "exportUserData",
+            "OravionUserProfile",
+            "audit log",
+            "consent"
+          ],
+          "expectedElementsMissing": [
+            "PrismaClient",
+            "right to access",
+            "data portability",
+            "loginHistory",
+            "paymentMethods",
+            "nationalId"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "PER_ALPHA",
+            "MAIL_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 5808,
+      "tokensUsed": 1933,
+      "maskedPromptLength": 3526,
+      "responseLength": 2963
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "07-mixed-code-pii",
+        "privacy": 54,
+        "semanticPreservation": 69,
+        "responseQuality": 50,
+        "leakageRisk": 23,
+        "details": {
+          "sensitiveElementsMasked": [
+            "AKIAIOSFODNN7EXAMPLE",
+            "marc.duval@gmail.com",
+            "Marc DUVAL",
+            "+33 6 98 76 54 32",
+            "1 90 03 75 108 234 56",
+            "Thomas Lefèvre",
+            "thomas.lefevre@oravion.com"
+          ],
+          "sensitiveElementsLeaked": [
+            "oravion",
+            "Oravion",
+            "oravion-cloud.internal",
+            "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+            "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+            "oravion-gdpr-exports"
+          ],
+          "expectedElementsFound": [
+            "GDPR",
+            "encryption",
+            "AES",
+            "S3",
+            "OravionUserProfile",
+            "audit log",
+            "consent"
+          ],
+          "expectedElementsMissing": [
+            "PrismaClient",
+            "exportUserData",
+            "right to access",
+            "data portability",
+            "loginHistory",
+            "paymentMethods",
+            "nationalId"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "PER_ALPHA",
+            "MAIL_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 6366,
+      "tokensUsed": 2137,
+      "maskedPromptLength": 3526,
+      "responseLength": 3813
+    },
+    {
+      "score": {
+        "strategyId": "baseline",
+        "promptId": "08-js-api-integration",
+        "privacy": 0,
+        "semanticPreservation": 100,
+        "responseQuality": 93,
+        "leakageRisk": 100,
+        "details": {
+          "sensitiveElementsMasked": [],
+          "sensitiveElementsLeaked": [
+            "Stratium Analytics",
+            "Stratium",
+            "stratium-analytics.com",
+            "strtm_prod_a8f3e7b2c1d4_placeholder_key",
+            "clnt_nexova_prod_2024",
+            "nexova"
+          ],
+          "expectedElementsFound": [
+            "retry",
+            "exponential backoff",
+            "429",
+            "Retry-After",
+            "circuit breaker",
+            "StratiumApiError",
+            "StratiumRateLimitError",
+            "interceptor",
+            "request ID",
+            "class",
+            "async",
+            "AxiosInstance",
+            "setTimeout"
+          ],
+          "expectedElementsMissing": [
+            "catch"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 11134,
+      "tokensUsed": 2756,
+      "maskedPromptLength": 3252,
+      "responseLength": 5624
+    },
+    {
+      "score": {
+        "strategyId": "aggressive",
+        "promptId": "08-js-api-integration",
+        "privacy": 100,
+        "semanticPreservation": 80,
+        "responseQuality": 86,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Stratium Analytics",
+            "Stratium",
+            "stratium-analytics.com",
+            "strtm_prod_a8f3e7b2c1d4_placeholder_key",
+            "clnt_nexova_prod_2024",
+            "nexova"
+          ],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [
+            "retry",
+            "exponential backoff",
+            "429",
+            "Retry-After",
+            "circuit breaker",
+            "interceptor",
+            "request ID",
+            "class",
+            "async",
+            "catch",
+            "AxiosInstance",
+            "setTimeout"
+          ],
+          "expectedElementsMissing": [
+            "StratiumApiError",
+            "StratiumRateLimitError"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "ORG_BRAVO",
+            "ORG_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 19095,
+      "tokensUsed": 3820,
+      "maskedPromptLength": 3208,
+      "responseLength": 8044
+    },
+    {
+      "score": {
+        "strategyId": "values-only",
+        "promptId": "08-js-api-integration",
+        "privacy": 100,
+        "semanticPreservation": 80,
+        "responseQuality": 86,
+        "leakageRisk": 0,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Stratium Analytics",
+            "Stratium",
+            "stratium-analytics.com",
+            "strtm_prod_a8f3e7b2c1d4_placeholder_key",
+            "clnt_nexova_prod_2024",
+            "nexova"
+          ],
+          "sensitiveElementsLeaked": [],
+          "expectedElementsFound": [
+            "retry",
+            "exponential backoff",
+            "429",
+            "Retry-After",
+            "circuit breaker",
+            "interceptor",
+            "request ID",
+            "class",
+            "async",
+            "catch",
+            "AxiosInstance",
+            "setTimeout"
+          ],
+          "expectedElementsMissing": [
+            "StratiumApiError",
+            "StratiumRateLimitError"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "ORG_BRAVO",
+            "ORG_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 17048,
+      "tokensUsed": 3620,
+      "maskedPromptLength": 3208,
+      "responseLength": 7526
+    },
+    {
+      "score": {
+        "strategyId": "pii-only",
+        "promptId": "08-js-api-integration",
+        "privacy": 33,
+        "semanticPreservation": 70,
+        "responseQuality": 93,
+        "leakageRisk": 67,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Stratium Analytics",
+            "strtm_prod_a8f3e7b2c1d4_placeholder_key"
+          ],
+          "sensitiveElementsLeaked": [
+            "Stratium",
+            "stratium-analytics.com",
+            "clnt_nexova_prod_2024",
+            "nexova"
+          ],
+          "expectedElementsFound": [
+            "retry",
+            "exponential backoff",
+            "429",
+            "Retry-After",
+            "circuit breaker",
+            "StratiumApiError",
+            "StratiumRateLimitError",
+            "interceptor",
+            "request ID",
+            "class",
+            "async",
+            "AxiosInstance",
+            "setTimeout"
+          ],
+          "expectedElementsMissing": [
+            "catch"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": []
+        }
+      },
+      "latencyMs": 15035,
+      "tokensUsed": 3259,
+      "maskedPromptLength": 3213,
+      "responseLength": 7031
+    },
+    {
+      "score": {
+        "strategyId": "code-aware",
+        "promptId": "08-js-api-integration",
+        "privacy": 33,
+        "semanticPreservation": 70,
+        "responseQuality": 86,
+        "leakageRisk": 67,
+        "details": {
+          "sensitiveElementsMasked": [
+            "Stratium Analytics",
+            "strtm_prod_a8f3e7b2c1d4_placeholder_key"
+          ],
+          "sensitiveElementsLeaked": [
+            "Stratium",
+            "stratium-analytics.com",
+            "clnt_nexova_prod_2024",
+            "nexova"
+          ],
+          "expectedElementsFound": [
+            "retry",
+            "exponential backoff",
+            "429",
+            "Retry-After",
+            "circuit breaker",
+            "interceptor",
+            "request ID",
+            "class",
+            "async",
+            "catch",
+            "AxiosInstance",
+            "setTimeout"
+          ],
+          "expectedElementsMissing": [
+            "StratiumApiError",
+            "StratiumRateLimitError"
+          ],
+          "codeStructurePreserved": true,
+          "maskingArtifacts": [
+            "ORG_ALPHA"
+          ]
+        }
+      },
+      "latencyMs": 14571,
+      "tokensUsed": 3284,
+      "maskedPromptLength": 3215,
+      "responseLength": 7284
+    }
+  ]
+}
