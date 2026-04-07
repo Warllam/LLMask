@@ -8,6 +8,7 @@ import type { RewriteEngineV4 as RewriteEngine } from "../rewrite/rewrite-engine
 import type { ResponseRemapEngine } from "../remap/response-remap-engine";
 import type { DetectionEngine } from "../detection/detection-engine";
 import type { ProviderRouter } from "../provider-adapter/provider-router";
+import type { RateLimitTracker } from "../../shared/security-middleware";
 import { buildCliPrompt, spawnClaudeCli } from "../claude-cli/claude-cli-adapter";
 import { liveBus, type LiveMaskingEvent } from "./live-events";
 
@@ -20,13 +21,14 @@ type ChatDeps = {
   requestTimeoutMs: number;
   shieldTerms?: string[];
   adminKey?: string;
+  rateLimitTracker?: RateLimitTracker;
 };
 
 export function registerDashboardRoutes(
   server: FastifyInstance,
   deps: ChatDeps
 ) {
-  const { mappingStore, rewriteEngine, detectionEngine, providerRouter, requestTimeoutMs, shieldTerms, adminKey } = deps;
+  const { mappingStore, rewriteEngine, detectionEngine, providerRouter, requestTimeoutMs, shieldTerms, adminKey, rateLimitTracker } = deps;
 
   // Protect dashboard API routes when admin key is configured
   if (adminKey) {
@@ -145,7 +147,16 @@ export function registerDashboardRoutes(
   );
 
   server.get("/dashboard/api/stats", async () => {
-    return mappingStore.getStats();
+    const base = mappingStore.getStats();
+    const rateLimitStats = rateLimitTracker
+      ? {
+          rateLimiting: {
+            totalExceededRequests: rateLimitTracker.totalHits(),
+            topExceedingKeys: rateLimitTracker.getStats().slice(0, 10),
+          },
+        }
+      : {};
+    return { ...base, ...rateLimitStats };
   });
 
   // ---- Live SSE feed (community-accessible) ----
