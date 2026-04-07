@@ -3,6 +3,7 @@ import multipart from "@fastify/multipart";
 import { randomUUID } from "node:crypto";
 import { buildModules } from "./app/modules";
 import { registerDashboardRoutes } from "./modules/dashboard/dashboard-routes";
+import { registerGdprRoutes } from "./modules/dashboard/gdpr-routes";
 import type { AppConfig } from "./shared/config";
 import { stripImageMetadata, describeImageMetadata } from "./shared/image-sanitizer";
 import { extractText, isSupportedFile, isTextFile, isDocumentFile, isImageFile } from "./shared/file-extractors";
@@ -280,6 +281,39 @@ export function buildServer(config: AppConfig): FastifyInstance {
     shieldTerms: modules.shieldTerms,
     adminKey: config.adminKey,
   });
+
+  // ── GDPR routes (audit log, erasure, export, retention) ────────────
+  registerGdprRoutes(server, {
+    mappingStore: modules.mappingStore,
+    retentionDays: config.gdprRetentionDays,
+  });
+
+  // ── Data retention cleanup job ──────────────────────────────────────
+  // Runs once on startup and every 24h to delete old data (GDPR Article 5(e))
+  if (config.gdprRetentionDays > 0) {
+    const runRetention = () => {
+      try {
+        const result = modules.mappingStore.deleteOlderThan(config.gdprRetentionDays);
+        if (result.deletedRequests > 0 || result.deletedMappings > 0) {
+          server.log.info(
+            { retentionDays: config.gdprRetentionDays, ...result },
+            "GDPR retention cleanup completed"
+          );
+        }
+      } catch (err) {
+        server.log.error({ err }, "GDPR retention cleanup failed");
+      }
+    };
+
+    // Run on startup
+    setImmediate(runRetention);
+
+    // Re-run every 24h
+    const retentionInterval = setInterval(runRetention, 24 * 60 * 60 * 1000);
+    server.addHook("onClose", () => clearInterval(retentionInterval));
+
+    server.log.info({ retentionDays: config.gdprRetentionDays }, "GDPR data retention enabled");
+  }
 
   return server;
 }
