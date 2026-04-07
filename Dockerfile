@@ -6,7 +6,7 @@ FROM node:22-alpine AS deps
 
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --ignore-scripts=false
+RUN npm ci --ignore-scripts=false --no-audit --no-fund
 
 # ── Build proxy ──────────────────────────────────────────────────
 FROM deps AS build-proxy
@@ -21,7 +21,7 @@ FROM node:22-alpine AS build-dashboard
 
 WORKDIR /app/dashboard
 COPY dashboard/package.json dashboard/package-lock.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 COPY dashboard/ ./
 RUN npm run build
 
@@ -32,7 +32,7 @@ LABEL org.opencontainers.image.title="LLMask"
 LABEL org.opencontainers.image.description="Mask sensitive data before it reaches any LLM"
 LABEL org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0"
 
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl dumb-init
 RUN addgroup -S llmask && adduser -S -G llmask -h /app llmask
 
 WORKDIR /app
@@ -57,4 +57,5 @@ EXPOSE 8787
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD curl -sf http://localhost:8787/health || exit 1
 
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "dist/index.js"]
