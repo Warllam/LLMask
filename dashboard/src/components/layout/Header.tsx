@@ -1,4 +1,4 @@
-import { Shield, MessageSquare, Home, Keyboard, Menu, Activity, Settings, HeartPulse } from "lucide-react";
+import { Shield, MessageSquare, Home, Keyboard, Menu, Activity, Settings, HeartPulse, ClipboardList, SlidersHorizontal } from "lucide-react";
 import { useState } from "react";
 import type { View } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -10,12 +10,14 @@ interface HeaderProps {
 }
 
 const viewConfig: Record<View, { label: string; icon: typeof Home }> = {
-  welcome: { label: "Overview", icon: Home },
-  activity: { label: "Activity Feed", icon: Activity },
-  config: { label: "Configuration", icon: Settings },
-  health: { label: "System Health", icon: HeartPulse },
-  chat: { label: "Chat", icon: MessageSquare },
+  welcome: { label: "Accueil / Overview", icon: Home },
+  activity: { label: "Activité en direct / Live Activity", icon: Activity },
+  config: { label: "Configuration avancée", icon: Settings },
+  health: { label: "État du système / System Health", icon: HeartPulse },
+  chat: { label: "Assistant IA / AI Chat", icon: MessageSquare },
   conversation: { label: "Conversation", icon: Shield },
+  settings: { label: "Réglages / Settings", icon: SlidersHorizontal },
+  requestlog: { label: "Journal des requêtes / Request Log", icon: ClipboardList },
 };
 
 const shortcuts = [

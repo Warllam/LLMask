@@ -14,6 +14,8 @@ const Chat = lazy(() => import("@/components/views/Chat").then((m) => ({ default
 const ActivityFeed = lazy(() => import("@/components/views/ActivityFeed").then((m) => ({ default: m.ActivityFeed })));
 const Configuration = lazy(() => import("@/components/views/Configuration").then((m) => ({ default: m.Configuration })));
 const SystemHealth = lazy(() => import("@/components/views/SystemHealth").then((m) => ({ default: m.SystemHealth })));
+const Settings = lazy(() => import("@/components/views/Settings").then((m) => ({ default: m.Settings })));
+const RequestLog = lazy(() => import("@/components/views/RequestLog").then((m) => ({ default: m.RequestLog })));
 
 function ViewFallback() {
   return (
@@ -59,6 +61,12 @@ export function App() {
       } else if (hash === "health") {
         setCurrentView("health");
         setSelectedSession(null);
+      } else if (hash === "settings") {
+        setCurrentView("settings");
+        setSelectedSession(null);
+      } else if (hash === "requestlog") {
+        setCurrentView("requestlog");
+        setSelectedSession(null);
       } else if (hash === "chat") {
         setChatSessionId(null);
         setCurrentView("chat");
@@ -98,6 +106,10 @@ export function App() {
       window.location.hash = "config";
     } else if (view === "health") {
       window.location.hash = "health";
+    } else if (view === "settings") {
+      window.location.hash = "settings";
+    } else if (view === "requestlog") {
+      window.location.hash = "requestlog";
     } else {
       window.location.hash = "";
     }
@@ -194,6 +206,8 @@ export function App() {
               {currentView === "activity" && <ActivityFeed />}
               {currentView === "config" && <Configuration />}
               {currentView === "health" && <SystemHealth />}
+              {currentView === "settings" && <Settings />}
+              {currentView === "requestlog" && <RequestLog />}
               {currentView === "chat" && <Chat sessionId={chatSessionId} onSessionUpdate={refreshSessions} />}
             </Suspense>
             </ErrorBoundary>
