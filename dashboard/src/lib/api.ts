@@ -10,6 +10,7 @@ import type {
   ConfigInfo,
   ActivityEntry,
   LatencyStats,
+  AppSettings,
 } from "./types";
 
 const BASE = "/dashboard/api";
@@ -88,4 +89,15 @@ export const api = {
   configInfo: () => fetchJson<ConfigInfo>("/config/info"),
   recentActivity: (limit = 50) => fetchJson<ActivityEntry[]>(`/activity?limit=${limit}`),
   latencyStats: () => fetchJson<LatencyStats>("/stats/latency"),
+  getSettings: () => fetchJson<AppSettings>("/settings"),
+  updateSettings: async (settings: Partial<AppSettings>) => {
+    const res = await fetch(`${BASE}/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    });
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return res.json() as Promise<{ ok: true; settings: AppSettings }>;
+  },
+  recentRequests: (limit = 50) => fetchJson<RequestLogEntry[]>(`/requests?limit=${limit}`),
 };

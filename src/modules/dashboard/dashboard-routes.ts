@@ -22,6 +22,27 @@ type ChatDeps = {
   adminKey?: string;
 };
 
+// ---------------------------------------------------------------------------
+// Runtime settings (persisted to .llmask-settings.json in CWD)
+// ---------------------------------------------------------------------------
+
+interface RuntimeSettings {
+  maskingStrategy: "pseudonymization" | "redaction" | "generalization" | "tokenization";
+  retentionDays: number;
+  provider: string;
+}
+
+const settingsPath = path.join(process.cwd(), ".llmask-settings.json");
+let runtimeSettings: RuntimeSettings = {
+  maskingStrategy: "pseudonymization",
+  retentionDays: 30,
+  provider: "anthropic",
+};
+try {
+  const raw = fs.readFileSync(settingsPath, "utf-8");
+  runtimeSettings = { ...runtimeSettings, ...JSON.parse(raw) };
+} catch { /* use defaults */ }
+
 export function registerDashboardRoutes(
   server: FastifyInstance,
   deps: ChatDeps
@@ -48,6 +69,37 @@ export function registerDashboardRoutes(
     primaryProvider: providerRouter.primaryType,
     fallbackProvider: providerRouter.fallbackType
   }));
+
+  // ---- Settings (read/write dashboard preferences) ----
+  server.get("/dashboard/api/settings", async () => {
+    return { ...runtimeSettings, provider: runtimeSettings.provider || providerRouter.primaryType };
+  });
+
+  server.post<{ Body: Partial<RuntimeSettings> }>(
+    "/dashboard/api/settings",
+    async (request, reply) => {
+      const body = request.body as Partial<RuntimeSettings>;
+      const validStrategies = ["pseudonymization", "redaction", "generalization", "tokenization"];
+      const updated: RuntimeSettings = {
+        maskingStrategy: validStrategies.includes(body.maskingStrategy ?? "")
+          ? (body.maskingStrategy as RuntimeSettings["maskingStrategy"])
+          : runtimeSettings.maskingStrategy,
+        retentionDays: typeof body.retentionDays === "number" && body.retentionDays > 0
+          ? body.retentionDays
+          : runtimeSettings.retentionDays,
+        provider: typeof body.provider === "string" && body.provider.length > 0
+          ? body.provider
+          : runtimeSettings.provider,
+      };
+      runtimeSettings = updated;
+      try {
+        fs.writeFileSync(settingsPath, JSON.stringify(updated, null, 2), "utf-8");
+      } catch (err) {
+        server.log.warn({ err }, "Failed to persist settings");
+      }
+      return { ok: true, settings: updated };
+    }
+  );
 
   // --- Available models based on configured providers ---
   const MODEL_CATALOG: Record<string, Array<{ id: string; label: string }>> = {
