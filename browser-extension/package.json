@@ -1,0 +1,16 @@
+{
+  "name": "llmask-browser-extension",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LLMask Privacy Shield — Chrome extension for masking sensitive data in web LLM chats",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.270",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.5.0"
+  }
+}

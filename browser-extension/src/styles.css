@@ -1,0 +1,287 @@
+/* ── LLMask Privacy Shield — Shared styles ───────────────────────────── */
+/* Used by: popup.html (injected) + content script badge (injected via manifest) */
+
+/* ── Popup ───────────────────────────────────────────────────────────── */
+
+.popup-body {
+  width: 280px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  color: #1a1a2e;
+  background: #f8fafc;
+  margin: 0;
+  padding: 0;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  background: linear-gradient(135deg, #0f4c81 0%, #1a73e8 100%);
+  color: white;
+}
+
+.popup-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.popup-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.popup-subtitle {
+  margin: 0;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.toggle-wrap {
+  margin-left: auto;
+}
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  cursor: pointer;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.3);
+  transition: background 0.2s;
+}
+
+.toggle-track::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+}
+
+.toggle input:checked + .toggle-track {
+  background: #34d399;
+}
+
+.toggle input:checked + .toggle-track::after {
+  transform: translateX(18px);
+}
+
+/* Sections */
+.section {
+  padding: 10px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.section:last-of-type {
+  border-bottom: none;
+}
+
+/* Status row */
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.status-dot[data-state="ok"] {
+  background: #10b981;
+}
+
+.status-dot[data-state="error"] {
+  background: #ef4444;
+}
+
+.status-dot[data-state="checking"] {
+  background: #f59e0b;
+  animation: pulse 1s infinite;
+}
+
+.status-text {
+  font-size: 12px;
+  color: #475569;
+}
+
+/* Field label */
+.field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.input-row {
+  display: flex;
+  gap: 6px;
+}
+
+.text-input {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  color: #1e293b;
+  background: white;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.text-input:focus {
+  border-color: #1a73e8;
+}
+
+/* Buttons */
+.btn {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.btn-secondary:hover {
+  background: #cbd5e1;
+}
+
+/* Stats */
+.stats-section {
+  display: flex;
+  gap: 8px;
+}
+
+.stat-card {
+  flex: 1;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a73e8;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* Footer */
+.popup-footer {
+  padding: 8px 16px;
+  text-align: center;
+}
+
+.footer-link {
+  font-size: 11px;
+  color: #94a3b8;
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  color: #1a73e8;
+  text-decoration: underline;
+}
+
+/* ── In-page badge (injected by content script) ──────────────────────── */
+
+#llmask-badge {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  z-index: 2147483647; /* max z-index */
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: rgba(15, 76, 129, 0.88);
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: default;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  transition: background 0.25s, opacity 0.25s;
+  user-select: none;
+  pointer-events: none;
+}
+
+#llmask-badge[data-state="idle"] {
+  background: rgba(15, 76, 129, 0.75);
+  opacity: 0.7;
+}
+
+#llmask-badge[data-state="masking"] {
+  background: rgba(245, 158, 11, 0.92);
+  opacity: 1;
+  animation: pulse 0.8s infinite;
+}
+
+#llmask-badge[data-state="disabled"] {
+  background: rgba(100, 116, 139, 0.6);
+  opacity: 0.45;
+}
+
+.llmask-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.llmask-label {
+  line-height: 1;
+}
+
+/* ── Shared animation ────────────────────────────────────────────────── */
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
