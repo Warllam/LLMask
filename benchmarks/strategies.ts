@@ -66,6 +66,7 @@ const VALUE_CATEGORIES: MaskCategory[] = [
   ...PII_CATEGORIES, ...SECRET_CATEGORIES,
   "ip_address", "internal_url", "internal_domain", "org_name",
   "string_literal", "numeric_literal", "env_value",
+  "table_name", "column_name",
 ];
 
 function setOf<T>(...items: T[]): Set<T> {
