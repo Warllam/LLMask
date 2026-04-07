@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  ci:
+    # package.json engines field requires Node >=20.19.0, so Node 18 is not supported.
+    name: CI (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Cache root node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ matrix.node-version }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: node-modules-${{ matrix.node-version }}-
+
+      - name: Cache dashboard node_modules
+        uses: actions/cache@v4
+        with:
+          path: dashboard/node_modules
+          key: dashboard-node-modules-${{ matrix.node-version }}-${{ hashFiles('dashboard/package-lock.json') }}
+          restore-keys: dashboard-node-modules-${{ matrix.node-version }}-
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install dashboard dependencies
+        run: npm ci
+        working-directory: dashboard
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
