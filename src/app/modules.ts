@@ -6,6 +6,7 @@ import { LanguageRegistry } from "../modules/ast/language-registry";
 import { AstClassifier } from "../modules/ast/ast-classifier";
 import { DetectionEngine } from "../modules/detection/detection-engine";
 import { SqliteMappingStore } from "../modules/mapping-store/sqlite-mapping-store";
+import { CustomRulesStore } from "../modules/custom-rules/custom-rules-store";
 import { PolicyEngine } from "../modules/policy/policy-engine";
 import { ChatCompletionsProxyRoute } from "../modules/proxy/chat-completions-proxy-route";
 import { MessagesProxyRoute } from "../modules/proxy/messages-proxy-route";
@@ -77,10 +78,13 @@ function getProviderConfig(config: AppConfig, type: ProviderType) {
 export function buildModules(config: AppConfig, logger: FastifyBaseLogger) {
   const mappingStore = new SqliteMappingStore(config.sqlitePath);
   mappingStore.initialize();
+  const customRulesStore = new CustomRulesStore(mappingStore.getDb());
+  customRulesStore.initialize();
   const auditService = new AuditService(logger);
   const detectionEngine = new DetectionEngine();
   const policyEngine = new PolicyEngine();
   const rewriteEngine = new RewriteEngine(mappingStore);
+  rewriteEngine.setCustomRulesProvider(customRulesStore);
   const remapEngine = new ResponseRemapEngine(mappingStore);
   remapEngine.setLogger(logger);
 
@@ -265,6 +269,7 @@ export function buildModules(config: AppConfig, logger: FastifyBaseLogger) {
     messagesProxy: new MessagesProxyRoute(sharedDeps),
     providerRouter,
     mappingStore,
+    customRulesStore,
     rewriteEngine,
     remapEngine,
     detectionEngine,

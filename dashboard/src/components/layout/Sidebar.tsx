@@ -15,6 +15,7 @@ import {
   Activity,
   Settings,
   HeartPulse,
+  Filter,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -136,6 +137,15 @@ export function Sidebar({
           className={cn(currentView === "chat" && "bg-primary/10 text-primary")}
         >
           <MessageSquare className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onNavigate("custom-rules")}
+          className={cn(currentView === "custom-rules" && "bg-primary/10 text-primary")}
+          title="Custom Rules"
+        >
+          <Filter className="h-4 w-4" />
         </Button>
         <div className="flex-1" />
         <Button
@@ -377,6 +387,18 @@ export function Sidebar({
         >
           <MessageSquare className="h-4 w-4" />
           Chat
+        </button>
+        <button
+          onClick={() => onNavigate("custom-rules")}
+          className={cn(
+            "flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors",
+            currentView === "custom-rules"
+              ? "bg-primary/10 text-primary font-medium"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          )}
+        >
+          <Filter className="h-4 w-4" />
+          Custom Rules
         </button>
         <button
           onClick={() => onNavigate("health")}
