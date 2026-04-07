@@ -1,0 +1,94 @@
+version: '3.8'
+
+# ============================================================================
+# LLMask — Production Docker Compose
+# Usage: docker compose -f docker-compose.prod.yml --env-file deploy/.env up -d
+# ============================================================================
+
+services:
+
+  # ── LLMask proxy ─────────────────────────────────────────────────────────
+  llmask:
+    image: llmask:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: llmask
+    restart: unless-stopped
+    expose:
+      - "8787"
+    env_file:
+      - deploy/.env
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8787"
+      DATA_DIR: /app/data
+      SQLITE_PATH: /app/data/llmask.db
+      NODE_ENV: production
+    volumes:
+      - llmask-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8787/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+    networks:
+      - proxy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Caddy reverse proxy (automatic HTTPS) ─────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3 / QUIC
+    environment:
+      LLMASK_DOMAIN: ${LLMASK_DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data         # Certificates (Let's Encrypt)
+      - caddy-config:/config
+    networks:
+      - proxy
+    depends_on:
+      llmask:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: "0.25"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+
+# ── Volumes ───────────────────────────────────────────────────────────────
+volumes:
+  llmask-data:
+    name: llmask-data
+  caddy-data:
+    name: caddy-data
+  caddy-config:
+    name: caddy-config
+
+# ── Networks ──────────────────────────────────────────────────────────────
+networks:
+  proxy:
+    name: llmask-proxy

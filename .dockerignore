@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+dashboard/node_modules/
+
+# Build output
+dist/
+dashboard/dist/
+
+# Data & secrets
+data/
+*.db
+.env
+.env.*
+!.env.example
+
+# Dev & CI
+.git/
+.github/
+.claude/
+.vscode/
+*.log
+npm-debug.log*
+
+# Tests & docs
+tests/
+benchmarks/
+docs/
+
+# Misc
+*.md
+!package.json
+!package-lock.json
