@@ -1,0 +1,32 @@
+# ============================================================================
+# LLMask — Caddyfile
+# Caddy obtains and renews TLS certificates automatically via Let's Encrypt.
+# The domain is read from the LLMASK_DOMAIN environment variable.
+# ============================================================================
+
+{$LLMASK_DOMAIN} {
+
+    # Forward all traffic to the LLMask proxy
+    reverse_proxy llmask:8787
+
+    # Security headers
+    header {
+        # Prevent MIME-type sniffing
+        X-Content-Type-Options "nosniff"
+        # Deny framing (clickjacking protection)
+        X-Frame-Options "DENY"
+        # Force HTTPS for 1 year, include subdomains
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        # Minimal referrer info
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Remove server fingerprint header
+        -Server
+    }
+
+    # Structured access logs to stdout (collected by Docker)
+    log {
+        output stdout
+        format json
+        level INFO
+    }
+}
