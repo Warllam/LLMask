@@ -80,6 +80,11 @@ const envSchema = z.object({
     z.boolean().default(false)
   ),
   LLMASK_ADMIN_KEY: z.string().optional(),
+  // JWT secret for dashboard session tokens (generated randomly if not set)
+  LLMASK_JWT_SECRET: z.string().default(""),
+  // Default admin credentials seeded on first run
+  LLMASK_ADMIN_USER: z.string().default("admin"),
+  LLMASK_ADMIN_PASSWORD: z.string().default(""),
 
   // Edition (deprecated — use LLMASK_LICENSE_KEY instead)
   LLMASK_EDITION: z.enum(["oss", "enterprise", "community", "pro"]).default("community"),
@@ -218,6 +223,9 @@ export type AppConfig = {
 
   authEnabled: boolean;
   adminKey?: string;
+  jwtSecret: string;
+  adminUser: string;
+  adminPassword: string;
 
   edition: "community" | "pro" | "enterprise";
 
@@ -334,6 +342,9 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
 
     authEnabled: parsed.LLMASK_AUTH_ENABLED,
     adminKey: parsed.LLMASK_ADMIN_KEY || undefined,
+    jwtSecret: parsed.LLMASK_JWT_SECRET,
+    adminUser: parsed.LLMASK_ADMIN_USER,
+    adminPassword: parsed.LLMASK_ADMIN_PASSWORD,
 
     // Map old edition values to new tier names
     edition: parsed.LLMASK_EDITION === "oss" ? "community"

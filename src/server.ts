@@ -1,8 +1,9 @@
 import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply } from "fastify";
 import multipart from "@fastify/multipart";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { buildModules } from "./app/modules";
 import { registerDashboardRoutes } from "./modules/dashboard/dashboard-routes";
+import { UserAuthService } from "./modules/users/user-auth";
 import type { AppConfig } from "./shared/config";
 import { stripImageMetadata, describeImageMetadata } from "./shared/image-sanitizer";
 import { extractText, isSupportedFile, isTextFile, isDocumentFile, isImageFile } from "./shared/file-extractors";
@@ -24,7 +25,7 @@ import {
   recordHttpRequest,
 } from "./shared/metrics";
 
-export function buildServer(config: AppConfig): FastifyInstance {
+export async function buildServer(config: AppConfig): Promise<FastifyInstance> {
   const securityConf = parseSecurityConfig(process.env);
   const server = Fastify({
     logger: {
@@ -48,6 +49,34 @@ export function buildServer(config: AppConfig): FastifyInstance {
   }
 
   const modules = buildModules(config, server.log);
+
+  // ── User auth service ─────────────────────────────────────────────
+  const jwtSecret = config.jwtSecret || randomBytes(32).toString("hex");
+  if (!config.jwtSecret) {
+    server.log.warn("LLMASK_JWT_SECRET not set — using a random secret (tokens invalidated on restart)");
+  }
+  const userAuth = new UserAuthService(modules.userStore, jwtSecret);
+
+  // Seed default admin on first run
+  if (!modules.userStore.hasUsers()) {
+    const adminUsername = config.adminUser || "admin";
+    const adminPassword = config.adminPassword || randomBytes(12).toString("hex");
+    const passwordHash = await userAuth.hashPassword(adminPassword);
+    modules.userStore.createUser(randomUUID(), adminUsername, passwordHash, "admin");
+    server.log.info(
+      { username: adminUsername },
+      `Default admin created — username: ${adminUsername}  password: ${adminPassword}`
+    );
+    if (!config.adminPassword) {
+      // Print prominently to console since this is the first-run credential
+      console.log("\n========================================");
+      console.log("  LLMask: default admin credentials");
+      console.log(`  Username: ${adminUsername}`);
+      console.log(`  Password: ${adminPassword}`);
+      console.log("  (set LLMASK_ADMIN_PASSWORD to use a fixed password)");
+      console.log("========================================\n");
+    }
+  }
 
   void server.register(multipart, {
     limits: {
@@ -279,6 +308,8 @@ export function buildServer(config: AppConfig): FastifyInstance {
     requestTimeoutMs: config.requestTimeoutMs,
     shieldTerms: modules.shieldTerms,
     adminKey: config.adminKey,
+    userStore: modules.userStore,
+    userAuth,
   });
 
   return server;

@@ -11,11 +11,23 @@ import type {
   ActivityEntry,
   LatencyStats,
 } from "./types";
+import { authStore } from "./auth";
 
 const BASE = "/dashboard/api";
 
+function authHeaders(): Record<string, string> {
+  const token = authStore.getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`);
+  const res = await fetch(`${BASE}${path}`, { headers: authHeaders() });
+  if (res.status === 401) {
+    // Token expired or invalid — clear auth and reload to trigger login redirect
+    authStore.clear();
+    window.location.reload();
+    throw new Error("Session expired");
+  }
   if (!res.ok) throw new Error(`API error ${res.status}: ${res.statusText}`);
   return res.json() as Promise<T>;
 }
@@ -36,7 +48,7 @@ export const api = {
       `${BASE}/sessions/${encodeURIComponent(traceId)}/title`,
       {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ title }),
       }
     );
@@ -46,7 +58,7 @@ export const api = {
   deleteSession: async (traceId: string) => {
     const res = await fetch(
       `${BASE}/sessions/${encodeURIComponent(traceId)}`,
-      { method: "DELETE" }
+      { method: "DELETE", headers: authHeaders() }
     );
     if (!res.ok) throw new Error(`API error ${res.status}`);
     return res.json() as Promise<{ ok: true }>;
@@ -58,7 +70,7 @@ export const api = {
   ) => {
     const res = await fetch(`${BASE}/chat/preview`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ message, history, sessionId }),
     });
     if (!res.ok) throw new Error(`API error ${res.status}`);
@@ -72,6 +84,7 @@ export const api = {
   acknowledgeAlert: async (ruleId: string) => {
     const res = await fetch(`${BASE}/alerts/rules/${encodeURIComponent(ruleId)}/acknowledge`, {
       method: "POST",
+      headers: authHeaders(),
     });
     if (!res.ok) throw new Error(`API error ${res.status}`);
     return res.json() as Promise<{ ok: true }>;
@@ -79,7 +92,7 @@ export const api = {
   toggleAlertRule: async (ruleId: string, enabled: boolean) => {
     const res = await fetch(`${BASE}/alerts/rules/${encodeURIComponent(ruleId)}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ enabled }),
     });
     if (!res.ok) throw new Error(`API error ${res.status}`);
@@ -88,4 +101,47 @@ export const api = {
   configInfo: () => fetchJson<ConfigInfo>("/config/info"),
   recentActivity: (limit = 50) => fetchJson<ActivityEntry[]>(`/activity?limit=${limit}`),
   latencyStats: () => fetchJson<LatencyStats>("/stats/latency"),
+
+  // ── User management (admin only) ──────────────────────────────────
+  users: {
+    list: () => fetchJson<UserInfo[]>("/users"),
+    create: async (username: string, password: string, role: "admin" | "viewer") => {
+      const res = await fetch(`${BASE}/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ username, password, role }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: { message?: string } };
+        throw new Error(body?.error?.message ?? `API error ${res.status}`);
+      }
+      return res.json() as Promise<UserInfo>;
+    },
+    update: async (id: string, patch: { role?: "admin" | "viewer"; password?: string }) => {
+      const res = await fetch(`${BASE}/users/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      return res.json() as Promise<{ ok: true }>;
+    },
+    delete: async (id: string) => {
+      const res = await fetch(`${BASE}/users/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      return res.json() as Promise<{ ok: true }>;
+    },
+  },
+};
+
+export type UserInfo = {
+  id: string;
+  username: string;
+  role: "admin" | "viewer";
+  apiKey: string;
+  createdAt: string;
+  lastLogin: string | null;
 };

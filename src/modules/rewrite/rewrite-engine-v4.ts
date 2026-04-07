@@ -167,7 +167,7 @@ export class RewriteEngineV4 {
       rewrittenRequest.messages = rewrittenRequest.messages.map((message) => {
         if (message.content === undefined || message.content === null) return message;
         const shielded = rewriteContentBlocks(message.content, (text) => this.projectShield!.apply(text));
-        return { ...message, content: shielded };
+        return { ...message, content: shielded as typeof message.content };
       });
     }
 
@@ -206,7 +206,7 @@ export class RewriteEngineV4 {
       if (message.role === "system" || message.role === "developer") return message;
 
       const rewritten = rewriteContentBlocks(message.content, (text) => rewriteString(text, rewriteState));
-      return { ...message, content: rewritten };
+      return { ...message, content: rewritten as typeof message.content };
     });
     transformedCount = rewriteState.transformedCount.value;
 

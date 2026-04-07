@@ -19,6 +19,7 @@ import { EntityCache } from "../modules/llm-extractor/entity-cache";
 import { ProjectShield } from "../modules/project-shield/project-shield";
 import { generateHeuristicShield, autoGenerateShield } from "../modules/project-shield/shield-generator";
 import type { AppConfig, ProviderType } from "../shared/config";
+import { UserStore } from "../modules/users/user-store";
 
 function getProviderConfig(config: AppConfig, type: ProviderType) {
   if (type === "anthropic") {
@@ -259,12 +260,16 @@ export function buildModules(config: AppConfig, logger: FastifyBaseLogger) {
     llmExtractor
   };
 
+  // User store shares the same SQLite connection as the mapping store
+  const userStore = new UserStore(mappingStore.getDb());
+
   return {
     chatCompletionsProxy: new ChatCompletionsProxyRoute(sharedDeps),
     responsesProxy: new ResponsesProxyRoute(sharedDeps),
     messagesProxy: new MessagesProxyRoute(sharedDeps),
     providerRouter,
     mappingStore,
+    userStore,
     rewriteEngine,
     remapEngine,
     detectionEngine,
