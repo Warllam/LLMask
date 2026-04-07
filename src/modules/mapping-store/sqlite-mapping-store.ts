@@ -89,12 +89,25 @@ export class SqliteMappingStore implements MappingStore {
       );
     `);
 
-    // Safe migration for existing databases
+    // Safe migrations for existing databases
     try {
       this.db.exec(`ALTER TABLE request_log ADD COLUMN response_body TEXT`);
     } catch {
       // Column already exists — ignore
     }
+
+    // Custom rules table (added in v2)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS custom_rules (
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        name              TEXT    NOT NULL,
+        pattern           TEXT    NOT NULL,
+        replacement_prefix TEXT   NOT NULL DEFAULT 'CUSTOM',
+        category          TEXT    NOT NULL DEFAULT 'Custom',
+        enabled           INTEGER NOT NULL DEFAULT 1,
+        created_at        TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+      );
+    `);
   }
 
   listMappings(scopeId: string): MappingEntry[] {

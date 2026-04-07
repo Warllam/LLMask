@@ -205,4 +205,21 @@ export interface ActivityEntry {
   status: "success" | "error";
 }
 
-export type View = "welcome" | "conversation" | "chat" | "activity" | "config" | "health";
+export type View = "welcome" | "conversation" | "chat" | "activity" | "config" | "health" | "custom-rules";
+
+export interface CustomRule {
+  id: number;
+  name: string;
+  pattern: string;
+  replacementPrefix: string;
+  category: string;
+  enabled: boolean;
+  createdAt: string;
+}
+
+export interface TestRuleResult {
+  valid: boolean;
+  matches: string[];
+  preview: string;
+  error?: string;
+}

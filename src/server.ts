@@ -276,6 +276,7 @@ export function buildServer(config: AppConfig): FastifyInstance {
     remapEngine: modules.remapEngine,
     detectionEngine: modules.detectionEngine,
     providerRouter: modules.providerRouter,
+    customRulesStore: modules.customRulesStore,
     requestTimeoutMs: config.requestTimeoutMs,
     shieldTerms: modules.shieldTerms,
     adminKey: config.adminKey,

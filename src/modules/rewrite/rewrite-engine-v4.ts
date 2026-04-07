@@ -56,14 +56,93 @@ export type RewriteOptions = {
  * 3. Fixed import filtering → catches MembreForce, MissionForce
  * 4. Full INSERT column list parsing
  */
+export type CustomRulesProvider = {
+  getEnabledRules(): Array<{ id: number; name: string; pattern: string; replacementPrefix: string; category: string }>;
+};
+
 export class RewriteEngineV4 {
   private readonly nerDetector = new NerDetectorV4();
   private projectShield: ProjectShield | null = null;
+  private customRulesProvider: CustomRulesProvider | null = null;
 
   constructor(private readonly mappingStore: MappingStore) {}
 
   setProjectShield(shield: ProjectShield): void {
     this.projectShield = shield;
+  }
+
+  setCustomRulesProvider(provider: CustomRulesProvider): void {
+    this.customRulesProvider = provider;
+  }
+
+  /**
+   * Apply enabled custom regex rules to a serialized JSON string.
+   * Returns the updated string and the count of new replacements made.
+   * Uses a deterministic pseudonym per unique match: PREFIX_Cxxxxxxxx (8-char hex of match).
+   */
+  private applyCustomRulesToJson(
+    json: string,
+    context: RewriteContext,
+    newEntries: Array<{ kind: MappingKind; originalValue: string; pseudonym: string }>,
+    transformedCountObj: { value: number },
+    dryRun?: boolean
+  ): string {
+    if (!this.customRulesProvider) return json;
+    const rules = this.customRulesProvider.getEnabledRules();
+    if (rules.length === 0) return json;
+
+    // Build a map of already-known originals → pseudonyms for this scope
+    const existing = this.mappingStore.listMappings(context.scopeId);
+    const origToPseudo = new Map(existing.map((e) => [e.originalValue, e.pseudonym]));
+    // Also include entries produced earlier in this same call
+    for (const e of newEntries) origToPseudo.set(e.originalValue, e.pseudonym);
+
+    let result = json;
+    for (const rule of rules) {
+      let re: RegExp;
+      try {
+        re = new RegExp(rule.pattern, "g");
+      } catch {
+        continue; // skip invalid patterns
+      }
+
+      const prefix = rule.replacementPrefix || "CUSTOM";
+      re.lastIndex = 0;
+      let match: RegExpExecArray | null;
+
+      while ((match = re.exec(result)) !== null) {
+        const original = match[0];
+        if (!original) { re.lastIndex++; continue; }
+
+        let pseudo = origToPseudo.get(original);
+        if (!pseudo) {
+          // Generate a short deterministic hex tag from the value
+          let hash = 0;
+          for (let i = 0; i < original.length; i++) {
+            hash = ((hash << 5) - hash + original.charCodeAt(i)) | 0;
+          }
+          pseudo = `${prefix}_C${(hash >>> 0).toString(16).toUpperCase().padStart(8, "0")}`;
+          origToPseudo.set(original, pseudo);
+          newEntries.push({ kind: "idn", originalValue: original, pseudonym: pseudo });
+          transformedCountObj.value++;
+        }
+
+        // Replace all occurrences of this specific match in the remaining string
+        const escaped = original.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        result = result.replace(new RegExp(escaped, "g"), pseudo);
+        // Reset search from start since string changed
+        re.lastIndex = 0;
+      }
+    }
+
+    if (!dryRun && newEntries.length > 0) {
+      const toUpsert = newEntries.filter((e) => !existing.some((x) => x.originalValue === e.originalValue));
+      if (toUpsert.length > 0) {
+        this.mappingStore.upsertMappings(context.scopeId, toUpsert);
+      }
+    }
+
+    return result;
   }
 
   /**
@@ -219,6 +298,18 @@ export class RewriteEngineV4 {
 
     this.mappingStore.upsertMappings(context.scopeId, newEntries);
 
+    // Apply custom rules as a final text pass on the serialized request
+    if (this.customRulesProvider) {
+      const customNewEntries: Array<{ kind: MappingKind; originalValue: string; pseudonym: string }> = [];
+      const countObj = { value: 0 };
+      const serialized = JSON.stringify(rewrittenRequest);
+      const updated = this.applyCustomRulesToJson(serialized, context, customNewEntries, countObj);
+      if (countObj.value > 0) {
+        const parsed = JSON.parse(updated) as ChatCompletionsRequest;
+        return { rewrittenRequest: parsed, transformedCount: transformedCount + countObj.value };
+      }
+    }
+
     return { rewrittenRequest, transformedCount };
   }
 
@@ -304,6 +395,24 @@ export class RewriteEngineV4 {
 
     if (!options?.dryRun) {
       this.mappingStore.upsertMappings(context.scopeId, newEntries);
+    }
+
+    // Apply custom rules as a final text pass on the serialized payload
+    if (this.customRulesProvider) {
+      const customNewEntries: Array<{ kind: MappingKind; originalValue: string; pseudonym: string }> = [];
+      const countObj = { value: 0 };
+      const serialized = JSON.stringify(rewrittenPayload);
+      const updated = this.applyCustomRulesToJson(
+        serialized, context, customNewEntries, countObj, options?.dryRun
+      );
+      if (countObj.value > 0) {
+        const finalPayload = JSON.parse(updated);
+        return {
+          rewrittenPayload: finalPayload,
+          transformedCount: transformedCount + countObj.value,
+          newEntries: [...newEntries, ...customNewEntries],
+        };
+      }
     }
 
     return { rewrittenPayload, transformedCount, newEntries };
