@@ -205,4 +205,54 @@ export interface ActivityEntry {
   status: "success" | "error";
 }
 
-export type View = "welcome" | "conversation" | "chat" | "activity" | "config" | "health";
+export type View = "welcome" | "conversation" | "chat" | "activity" | "config" | "health" | "gdpr";
+
+// ── GDPR Types ────────────────────────────────────────────────────────────────
+
+export interface AuditLogEntry {
+  id: number;
+  timestamp: string;
+  maskedCount: number;
+  strategy: string;
+  provider: string;
+  categories: string[];
+}
+
+export interface AuditLogPage {
+  entries: AuditLogEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface AuditLogQuery {
+  page?: number;
+  pageSize?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  strategy?: string;
+  provider?: string;
+}
+
+export interface GdprEvent {
+  id: number;
+  timestamp: string;
+  eventType: "erasure" | "export" | "retention_cleanup";
+  affectedCount: number;
+  searchTerm?: string;
+  details: string;
+}
+
+export interface RetentionInfo {
+  retentionDays: number;
+  enabled: boolean;
+  envVar: string;
+  description: string;
+}
+
+export interface EraseResult {
+  ok: boolean;
+  deletedMappings: number;
+  deletedRequests: number;
+  deletedSessions: number;
+}

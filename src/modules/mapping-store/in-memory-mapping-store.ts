@@ -7,6 +7,12 @@ import type {
   DashboardStats,
   DsiStats,
   LeakReport,
+  AuditLogPage,
+  AuditLogQuery,
+  GdprEvent,
+  RetentionResult,
+  EraseResult,
+  ExportData,
 } from "./mapping-store";
 
 /**
@@ -160,5 +166,39 @@ export class InMemoryMappingStore implements MappingStore {
 
   deleteSession(traceId: string): void {
     // No-op
+  }
+
+  // ── GDPR stubs (no persistence needed for in-memory store) ───────────────
+  queryAuditLogs(_query: AuditLogQuery): AuditLogPage {
+    return { entries: [], total: 0, page: 1, pageSize: 50 };
+  }
+
+  insertGdprEvent(_event: Omit<GdprEvent, "id" | "timestamp">): void {
+    // No-op
+  }
+
+  listGdprEvents(_limit?: number): GdprEvent[] {
+    return [];
+  }
+
+  deleteOlderThan(days: number): RetentionResult {
+    const cutoffDate = new Date(Date.now() - days * 86_400_000).toISOString();
+    return { deletedMappings: 0, deletedRequests: 0, deletedSessions: 0, cutoffDate };
+  }
+
+  eraseBySearchTerm(_term: string): EraseResult {
+    return { deletedMappings: 0, deletedRequests: 0, deletedSessions: 0 };
+  }
+
+  exportAll(retentionDays: number): ExportData {
+    return {
+      exportedAt: new Date().toISOString(),
+      retentionDays,
+      mappingCount: 0,
+      requestCount: 0,
+      mappings: [],
+      requests: [],
+      gdprEvents: [],
+    };
   }
 }

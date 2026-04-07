@@ -15,6 +15,7 @@ import {
   Activity,
   Settings,
   HeartPulse,
+  Lock,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -145,6 +146,15 @@ export function Sidebar({
           className={cn(currentView === "health" && "bg-primary/10 text-primary")}
         >
           <HeartPulse className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onNavigate("gdpr")}
+          className={cn(currentView === "gdpr" && "bg-primary/10 text-primary")}
+          title="GDPR Compliance"
+        >
+          <Lock className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
@@ -389,6 +399,18 @@ export function Sidebar({
         >
           <HeartPulse className="h-4 w-4" />
           Health
+        </button>
+        <button
+          onClick={() => onNavigate("gdpr")}
+          className={cn(
+            "flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors",
+            currentView === "gdpr"
+              ? "bg-primary/10 text-primary font-medium"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          )}
+        >
+          <Lock className="h-4 w-4" />
+          GDPR
         </button>
         <button
           onClick={() => onNavigate("config")}
