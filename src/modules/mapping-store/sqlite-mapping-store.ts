@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
-import type { DashboardStats, DsiStats, LeakContext, LeakReport, MappingEntry, MappingStore, RequestLogEntry, ScopeSummary, SessionSummary } from "./mapping-store";
+import type { AuditLogEntry, AuditLogPage, AuditLogQuery, DashboardStats, DsiStats, EraseResult, ExportData, GdprEvent, LeakContext, LeakReport, MappingEntry, MappingStore, RequestLogEntry, RetentionResult, ScopeSummary, SessionSummary } from "./mapping-store";
 
 type MappingRow = {
   scope_id: string;
@@ -87,6 +87,17 @@ export class SqliteMappingStore implements MappingStore {
         is_auto_generated INTEGER NOT NULL DEFAULT 1,
         updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
       );
+
+      CREATE TABLE IF NOT EXISTS gdpr_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        event_type TEXT NOT NULL,
+        affected_count INTEGER NOT NULL DEFAULT 0,
+        search_term TEXT,
+        details TEXT NOT NULL DEFAULT '{}'
+      );
+      CREATE INDEX IF NOT EXISTS idx_gdpr_events_timestamp
+        ON gdpr_events(timestamp);
     `);
 
     // Safe migration for existing databases
@@ -476,6 +487,225 @@ export class SqliteMappingStore implements MappingStore {
       shieldLeaks: 0,
       leakDetails: [],
     };
+  }
+
+  // ── GDPR methods ───────────────────────────────────────────────────────────
+
+  queryAuditLogs(query: AuditLogQuery = {}): AuditLogPage {
+    const { page = 1, pageSize = 50, dateFrom, dateTo, strategy, provider } = query;
+    const safePage = Math.max(1, page);
+    const safePageSize = Math.min(Math.max(1, pageSize), 500);
+    const offset = (safePage - 1) * safePageSize;
+
+    const conditions: string[] = [];
+    const params: (string | number)[] = [];
+
+    if (dateFrom) { conditions.push("r.created_at >= ?"); params.push(dateFrom); }
+    if (dateTo)   { conditions.push("r.created_at <= ?"); params.push(dateTo); }
+    if (strategy) { conditions.push("r.endpoint = ?"); params.push(strategy); }
+    if (provider) { conditions.push("r.model = ?"); params.push(provider); }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+    const countRow = this.db.prepare<(string | number)[], { c: number }>(
+      `SELECT COUNT(*) as c FROM request_log r ${where}`
+    ).get(...params as []);
+    const total = countRow?.c ?? 0;
+
+    type AuditRow = { id: number; created_at: string; transformed_count: number; endpoint: string; model: string | null; trace_id: string };
+    const rows = this.db.prepare<(string | number)[], AuditRow>(
+      `SELECT r.id, r.created_at, r.transformed_count, r.endpoint, r.model, r.trace_id
+       FROM request_log r ${where}
+       ORDER BY r.created_at DESC
+       LIMIT ? OFFSET ?`
+    ).all(...params as [], safePageSize, offset);
+
+    // Batch-fetch categories for these trace IDs
+    const traceIds = [...new Set(rows.map((r) => r.trace_id))];
+    const categoriesByTrace = new Map<string, string[]>();
+    if (traceIds.length > 0) {
+      const placeholders = traceIds.map(() => "?").join(",");
+      type KindRow = { scope_id: string; kind: string };
+      const kindRows = this.db.prepare<string[], KindRow>(
+        `SELECT DISTINCT scope_id, kind FROM mapping_entries WHERE scope_id IN (${placeholders})`
+      ).all(...traceIds);
+      for (const kr of kindRows) {
+        const arr = categoriesByTrace.get(kr.scope_id) ?? [];
+        arr.push(kr.kind);
+        categoriesByTrace.set(kr.scope_id, arr);
+      }
+    }
+
+    const entries: AuditLogEntry[] = rows.map((row) => ({
+      id: row.id,
+      timestamp: row.created_at,
+      maskedCount: row.transformed_count,
+      strategy: row.endpoint,
+      provider: row.model ?? "unknown",
+      categories: categoriesByTrace.get(row.trace_id) ?? [],
+    }));
+
+    return { entries, total, page: safePage, pageSize: safePageSize };
+  }
+
+  insertGdprEvent(event: Omit<GdprEvent, "id" | "timestamp">): void {
+    this.db.prepare(`
+      INSERT INTO gdpr_events (event_type, affected_count, search_term, details)
+      VALUES (?, ?, ?, ?)
+    `).run(event.eventType, event.affectedCount, event.searchTerm ?? null, event.details);
+  }
+
+  listGdprEvents(limit = 100): GdprEvent[] {
+    type GdprRow = { id: number; timestamp: string; event_type: string; affected_count: number; search_term: string | null; details: string };
+    const rows = this.db.prepare<[number], GdprRow>(
+      `SELECT id, timestamp, event_type, affected_count, search_term, details
+       FROM gdpr_events
+       ORDER BY timestamp DESC LIMIT ?`
+    ).all(limit);
+    return rows.map((r) => ({
+      id: r.id,
+      timestamp: r.timestamp,
+      eventType: r.event_type as GdprEvent["eventType"],
+      affectedCount: r.affected_count,
+      searchTerm: r.search_term ?? undefined,
+      details: r.details,
+    }));
+  }
+
+  deleteOlderThan(days: number): RetentionResult {
+    const cutoff = new Date(Date.now() - days * 86_400_000).toISOString();
+
+    const result = this.db.transaction(() => {
+      // Find old trace IDs from request_log to also clean mapping_entries
+      type TraceRow = { trace_id: string };
+      const oldTraces = this.db.prepare<[string], TraceRow>(
+        `SELECT DISTINCT trace_id FROM request_log WHERE created_at < ?`
+      ).all(cutoff).map((r) => r.trace_id);
+
+      let deletedMappings = 0;
+      let deletedSessions = 0;
+      if (oldTraces.length > 0) {
+        const placeholders = oldTraces.map(() => "?").join(",");
+        deletedMappings = this.db.prepare(
+          `DELETE FROM mapping_entries WHERE scope_id IN (${placeholders})`
+        ).run(...oldTraces as []).changes;
+        deletedSessions = this.db.prepare(
+          `DELETE FROM session_titles WHERE trace_id IN (${placeholders})`
+        ).run(...oldTraces as []).changes;
+        for (const tid of oldTraces) this.mappingCache.delete(tid);
+      }
+
+      const deletedRequests = this.db.prepare(
+        `DELETE FROM request_log WHERE created_at < ?`
+      ).run(cutoff).changes;
+
+      return { deletedMappings, deletedRequests, deletedSessions };
+    })();
+
+    this.insertGdprEvent({
+      eventType: "retention_cleanup",
+      affectedCount: result.deletedRequests + result.deletedMappings,
+      details: JSON.stringify({ cutoffDate: cutoff, days, ...result }),
+    });
+
+    return { ...result, cutoffDate: cutoff };
+  }
+
+  eraseBySearchTerm(term: string): EraseResult {
+    const like = `%${term}%`;
+
+    const result = this.db.transaction(() => {
+      // Find trace IDs of matching requests
+      type TraceRow = { trace_id: string };
+      const matchingTraces = this.db.prepare<[string, string, string], TraceRow>(
+        `SELECT DISTINCT trace_id FROM request_log
+         WHERE original_body LIKE ? OR rewritten_body LIKE ? OR response_body LIKE ?`
+      ).all(like, like, like).map((r) => r.trace_id);
+
+      // Find trace IDs of sessions whose mapping entries contain the term
+      const mappingTraces = this.db.prepare<[string, string], TraceRow>(
+        `SELECT DISTINCT scope_id as trace_id FROM mapping_entries
+         WHERE original_value LIKE ? OR pseudonym LIKE ?`
+      ).all(like, like).map((r) => r.trace_id);
+
+      const allTraces = [...new Set([...matchingTraces, ...mappingTraces])];
+
+      let deletedMappings = 0;
+      let deletedSessions = 0;
+      if (allTraces.length > 0) {
+        const placeholders = allTraces.map(() => "?").join(",");
+        deletedMappings = this.db.prepare(
+          `DELETE FROM mapping_entries WHERE scope_id IN (${placeholders})`
+        ).run(...allTraces as []).changes;
+        deletedSessions = this.db.prepare(
+          `DELETE FROM session_titles WHERE trace_id IN (${placeholders})`
+        ).run(...allTraces as []).changes;
+        for (const tid of allTraces) this.mappingCache.delete(tid);
+      }
+
+      const deletedRequests = this.db.prepare(
+        `DELETE FROM request_log WHERE trace_id IN (SELECT trace_id FROM request_log WHERE original_body LIKE ? OR rewritten_body LIKE ? OR response_body LIKE ?)`
+      ).run(like, like, like).changes;
+
+      return { deletedMappings, deletedRequests, deletedSessions };
+    })();
+
+    this.insertGdprEvent({
+      eventType: "erasure",
+      affectedCount: result.deletedRequests + result.deletedMappings,
+      searchTerm: term,
+      details: JSON.stringify(result),
+    });
+
+    return result;
+  }
+
+  exportAll(retentionDays: number): ExportData {
+    type MappingRow = { scope_id: string; kind: string; original_value: string; pseudonym: string; created_at: string };
+    const mappingRows = this.db.prepare<[], MappingRow>(
+      `SELECT scope_id, kind, original_value, pseudonym, created_at FROM mapping_entries ORDER BY created_at DESC`
+    ).all();
+    const mappings: MappingEntry[] = mappingRows.map((r) => ({
+      scopeId: r.scope_id,
+      kind: r.kind as MappingEntry["kind"],
+      originalValue: r.original_value,
+      pseudonym: r.pseudonym,
+      createdAt: r.created_at,
+    }));
+
+    type RequestRow = { id: number; trace_id: string; request_id: string; endpoint: string; model: string | null; transformed_count: number; created_at: string };
+    const requestRows = this.db.prepare<[], RequestRow>(
+      `SELECT id, trace_id, request_id, endpoint, model, transformed_count, created_at FROM request_log ORDER BY created_at DESC`
+    ).all();
+    const requests = requestRows.map((r) => ({
+      id: r.id,
+      traceId: r.trace_id,
+      requestId: r.request_id,
+      endpoint: r.endpoint,
+      model: r.model,
+      transformedCount: r.transformed_count,
+      createdAt: r.created_at,
+    }));
+
+    const gdprEvents = this.listGdprEvents(1000);
+
+    const exportData: ExportData = {
+      exportedAt: new Date().toISOString(),
+      retentionDays,
+      mappingCount: mappings.length,
+      requestCount: requests.length,
+      mappings,
+      requests,
+      gdprEvents,
+    };
+
+    this.insertGdprEvent({
+      eventType: "export",
+      affectedCount: mappings.length + requests.length,
+      details: JSON.stringify({ mappingCount: mappings.length, requestCount: requests.length }),
+    });
+
+    return exportData;
   }
 
   scanLeaks(limit = 200, shieldTerms?: string[]): LeakReport {
