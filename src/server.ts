@@ -1,16 +1,19 @@
 import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply } from "fastify";
 import multipart from "@fastify/multipart";
+import rateLimit from "@fastify/rate-limit";
 import { randomUUID } from "node:crypto";
 import { buildModules } from "./app/modules";
 import { registerDashboardRoutes } from "./modules/dashboard/dashboard-routes";
 import type { AppConfig } from "./shared/config";
 import { stripImageMetadata, describeImageMetadata } from "./shared/image-sanitizer";
 import { extractText, isSupportedFile, isTextFile, isDocumentFile, isImageFile } from "./shared/file-extractors";
-import { 
-  parseSecurityConfig, 
-  registerSecurityMiddleware, 
-  validatePromptSize, 
-  validateContentType 
+import {
+  parseSecurityConfig,
+  registerSecurityMiddleware,
+  validatePromptSize,
+  validateContentType,
+  extractRateLimitKey,
+  RateLimitTracker,
 } from "./shared/security-middleware";
 import { parsePromptInjectionConfig, createPromptInjectionGuard } from "./shared/prompt-injection-guard";
 import {
@@ -60,6 +63,50 @@ export function buildServer(config: AppConfig): FastifyInstance {
 
   // ── Enhanced Security Middleware ─────────────────────────────────
   const advancedRateLimiter = registerSecurityMiddleware(server, securityConf, server.log);
+
+  // ── Proxy Rate Limiting via @fastify/rate-limit (/v1/* only) ─────────
+  const rateLimitTracker = new RateLimitTracker();
+
+  void server.register(rateLimit, {
+    global: true,
+    max: securityConf.llmaskRateLimitMax,
+    timeWindow: securityConf.llmaskRateLimitWindowMs,
+    keyGenerator(request: FastifyRequest) {
+      return extractRateLimitKey(request) ?? (request.ip || "unknown");
+    },
+    // allowList returns true to bypass rate limiting for non-proxy routes
+    allowList(request: FastifyRequest) {
+      return !request.url.startsWith("/v1/");
+    },
+    errorResponseBuilder(_request: FastifyRequest, context: { max: number; ttl: number }) {
+      return {
+        error: {
+          message: `Rate limit exceeded. Maximum ${context.max} requests per ${Math.ceil(securityConf.llmaskRateLimitWindowMs / 60000)} minute(s). Retry after ${context.ttl} ms.`,
+          type: "rate_limit_error",
+          code: "RATE_LIMITED",
+        },
+      };
+    },
+    onExceeded(request: FastifyRequest, key: string) {
+      rateLimitTracker.record(key, request.url);
+    },
+    addHeaders: {
+      "x-ratelimit-limit": true,
+      "x-ratelimit-remaining": true,
+      "x-ratelimit-reset": true,
+      "retry-after": true,
+    },
+    addHeadersOnExceeding: {
+      "x-ratelimit-limit": true,
+      "x-ratelimit-remaining": true,
+      "x-ratelimit-reset": true,
+    },
+  });
+
+  server.log.info(
+    { max: securityConf.llmaskRateLimitMax, windowMs: securityConf.llmaskRateLimitWindowMs },
+    "Proxy rate limiting enabled (LLMASK_RATE_LIMIT / LLMASK_RATE_WINDOW)"
+  );
 
   // ── Metrics hooks (latency tracking & session counting) ───────────
   if (config.metricsEnabled) {
@@ -279,6 +326,7 @@ export function buildServer(config: AppConfig): FastifyInstance {
     requestTimeoutMs: config.requestTimeoutMs,
     shieldTerms: modules.shieldTerms,
     adminKey: config.adminKey,
+    rateLimitTracker,
   });
 
   return server;
