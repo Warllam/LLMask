@@ -204,6 +204,19 @@ export function applyMasking(
     if (/(?:secret|password|token)/i.test(element) && element.length > 10) return "secret_token";
     if (/\b\d+\.\d+\.\d+\b/.test(element)) return "ip_address";
 
+    // Check if it's an address
+    if (/\d+.*(?:rue|avenue|street|road|blvd)/i.test(element)) return "address";
+
+    // Check if it looks like a person name (multi-word capitalized names)
+    if (/^[A-ZÀ-Ü][a-zà-ÿ]+(?:\s+[A-ZÀ-Ü][A-Za-zà-ÿ]+)+$/.test(element)) return "person_name";
+    if (/^[A-ZÀ-Ü][a-zà-ÿ]+-[A-ZÀ-Ü][a-zà-ÿ]+\s+[A-ZÀ-Ü]+$/.test(element)) return "person_name";
+
+    // Check if it's an org name (contains capital letters and common org suffixes)
+    if (/(?:Technologies|Labs|Group|Systems|Analytics|Financial)/i.test(element)) return "org_name";
+
+    // Named entities starting with capital are more likely org/person names than code identifiers
+    if (/^[A-Z]/.test(element)) return "org_name";
+
     // Check if it looks like a code identifier (camelCase, snake_case, PascalCase)
     if (/^[a-z][a-zA-Z0-9]*$/.test(element)) return "variable_name";
     if (/^[A-Z][a-zA-Z0-9]*(?:[A-Z][a-z]+)+$/.test(element)) return "class_name";
@@ -213,18 +226,6 @@ export function applyMasking(
     // Check for table-like names (prefixed with schema indicators)
     if (/^[a-z]{2,4}_[a-z_]+$/.test(element)) return "table_name";
 
-    // Check if it's an address
-    if (/\d+.*(?:rue|avenue|street|road|blvd)/i.test(element)) return "address";
-
-    // Check if it looks like a person name
-    if (/^[A-ZÀ-Ü][a-zà-ÿ]+(?:\s+[A-ZÀ-Ü][A-Za-zà-ÿ]+)+$/.test(element)) return "person_name";
-    if (/^[A-ZÀ-Ü][a-zà-ÿ]+-[A-ZÀ-Ü][a-zà-ÿ]+\s+[A-ZÀ-Ü]+$/.test(element)) return "person_name";
-
-    // Check if it's an org name (contains capital letters, spaces, and common suffixes)
-    if (/(?:Technologies|Labs|Group|Systems|Analytics|Financial)/i.test(element)) return "org_name";
-
-    // Default: treat as org_name for named entities, string_literal for others
-    if (/^[A-Z]/.test(element)) return "org_name";
     return "string_literal";
   }
 
