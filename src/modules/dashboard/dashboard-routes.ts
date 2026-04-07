@@ -1,7 +1,8 @@
 import { Readable, Transform } from "node:stream";
 import path from "node:path";
 import fs from "node:fs";
-import type { FastifyInstance } from "fastify";
+import { randomUUID } from "node:crypto";
+import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import fastifyStatic from "@fastify/static";
 import type { MappingStore } from "../mapping-store/mapping-store";
 import type { RewriteEngineV4 as RewriteEngine } from "../rewrite/rewrite-engine-v4";
@@ -10,6 +11,8 @@ import type { DetectionEngine } from "../detection/detection-engine";
 import type { ProviderRouter } from "../provider-adapter/provider-router";
 import { buildCliPrompt, spawnClaudeCli } from "../claude-cli/claude-cli-adapter";
 import { liveBus, type LiveMaskingEvent } from "./live-events";
+import type { UserStore, UserRole } from "../users/user-store";
+import type { UserAuthService } from "../users/user-auth";
 
 type ChatDeps = {
   mappingStore: MappingStore;
@@ -20,6 +23,8 @@ type ChatDeps = {
   requestTimeoutMs: number;
   shieldTerms?: string[];
   adminKey?: string;
+  userStore?: UserStore;
+  userAuth?: UserAuthService;
 };
 
 // ---------------------------------------------------------------------------
@@ -47,15 +52,38 @@ export function registerDashboardRoutes(
   server: FastifyInstance,
   deps: ChatDeps
 ) {
-  const { mappingStore, rewriteEngine, detectionEngine, providerRouter, requestTimeoutMs, shieldTerms, adminKey } = deps;
+  const { mappingStore, rewriteEngine, detectionEngine, providerRouter, requestTimeoutMs, shieldTerms, adminKey, userStore, userAuth } = deps;
 
-  // Protect dashboard API routes when admin key is configured
-  if (adminKey) {
+  // ── JWT-based dashboard auth (when userAuth is configured) ──────────
+  if (userAuth) {
+    server.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
+      if (!request.url.startsWith("/dashboard")) return;
+      // Allow HTML pages and static assets through (SPA handles the login redirect)
+      if (
+        request.url === "/dashboard" ||
+        request.url === "/dashboard/" ||
+        request.url.startsWith("/dashboard/assets/") ||
+        // Allow login endpoint itself
+        request.url === "/dashboard/api/auth/login"
+      ) return;
+
+      const authHeader = request.headers.authorization;
+      const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+      if (!token) {
+        return reply.code(401).send({ error: { message: "Unauthorized — JWT required", code: "MISSING_TOKEN" } });
+      }
+      const payload = userAuth.verifyToken(token);
+      if (!payload) {
+        return reply.code(401).send({ error: { message: "Unauthorized — invalid or expired token", code: "INVALID_TOKEN" } });
+      }
+      // Attach user info to request for downstream handlers
+      (request as any).authUser = { id: payload.sub, username: payload.username, role: payload.role };
+    });
+  } else if (adminKey) {
+    // Legacy: static admin key (backward compat)
     server.addHook("onRequest", async (request, reply) => {
       if (!request.url.startsWith("/dashboard")) return;
-      // Allow the HTML page itself (serves login form)
       if (request.url === "/dashboard" || request.url === "/dashboard/") return;
-      // Check query param or header
       const queryKey = (request.query as Record<string, string>)?.key;
       const headerKey = request.headers["x-llmask-key"];
       const key = queryKey || (Array.isArray(headerKey) ? headerKey[0] : headerKey);
@@ -63,6 +91,115 @@ export function registerDashboardRoutes(
         return reply.code(401).send({ error: { message: "Unauthorized — provide admin key via ?key= or x-llmask-key header" } });
       }
     });
+  }
+
+  // ── Auth endpoints ──────────────────────────────────────────────────
+  if (userAuth) {
+    server.post<{ Body: { username: string; password: string } }>(
+      "/dashboard/api/auth/login",
+      async (request, reply) => {
+        const { username, password } = request.body as { username?: string; password?: string };
+        if (!username || !password) {
+          return reply.code(400).send({ error: { message: "username and password are required" } });
+        }
+        const result = await userAuth.login(username, password);
+        if (!result) {
+          return reply.code(401).send({ error: { message: "Invalid credentials" } });
+        }
+        return { token: result.token, user: result.user };
+      }
+    );
+
+    server.post("/dashboard/api/auth/logout", async (request, reply) => {
+      const authHeader = request.headers.authorization;
+      const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+      if (token) userAuth.logout(token);
+      return reply.code(204).send();
+    });
+
+    server.get("/dashboard/api/auth/me", async (request) => {
+      return (request as any).authUser ?? null;
+    });
+  }
+
+  // ── User management (admin only) ────────────────────────────────────
+  if (userStore && userAuth) {
+    function requireAdmin(request: FastifyRequest, reply: FastifyReply): boolean {
+      const user = (request as any).authUser as { role: string } | undefined;
+      if (!user || user.role !== "admin") {
+        reply.code(403).send({ error: { message: "Forbidden — admin role required" } });
+        return false;
+      }
+      return true;
+    }
+
+    server.get("/dashboard/api/users", async (request, reply) => {
+      if (!requireAdmin(request, reply)) return;
+      return userStore.listUsers();
+    });
+
+    server.post<{ Body: { username: string; password: string; role?: UserRole } }>(
+      "/dashboard/api/users",
+      async (request, reply) => {
+        if (!requireAdmin(request, reply)) return;
+        const { username, password, role = "viewer" } = request.body as {
+          username?: string; password?: string; role?: UserRole;
+        };
+        if (!username || !password) {
+          return reply.code(400).send({ error: { message: "username and password are required" } });
+        }
+        if (role !== "admin" && role !== "viewer") {
+          return reply.code(400).send({ error: { message: "role must be 'admin' or 'viewer'" } });
+        }
+        if (userStore.getUserByUsername(username)) {
+          return reply.code(409).send({ error: { message: "Username already exists" } });
+        }
+        const passwordHash = await userAuth.hashPassword(password);
+        const user = userStore.createUser(randomUUID(), username, passwordHash, role);
+        return reply.code(201).send(user);
+      }
+    );
+
+    server.patch<{ Params: { id: string }; Body: { role?: UserRole; password?: string } }>(
+      "/dashboard/api/users/:id",
+      async (request, reply) => {
+        if (!requireAdmin(request, reply)) return;
+        const { id } = request.params;
+        const { role, password } = request.body as { role?: UserRole; password?: string };
+
+        if (!userStore.getUserById(id)) {
+          return reply.code(404).send({ error: { message: "User not found" } });
+        }
+        if (role) {
+          if (role !== "admin" && role !== "viewer") {
+            return reply.code(400).send({ error: { message: "role must be 'admin' or 'viewer'" } });
+          }
+          userStore.updateRole(id, role);
+        }
+        if (password) {
+          const passwordHash = await userAuth.hashPassword(password);
+          userStore.updatePassword(id, passwordHash);
+        }
+        return { ok: true };
+      }
+    );
+
+    server.delete<{ Params: { id: string } }>(
+      "/dashboard/api/users/:id",
+      async (request, reply) => {
+        if (!requireAdmin(request, reply)) return;
+        const { id } = request.params;
+        const callerUser = (request as any).authUser as { id: string } | undefined;
+        if (callerUser?.id === id) {
+          return reply.code(400).send({ error: { message: "Cannot delete your own account" } });
+        }
+        if (!userStore.getUserById(id)) {
+          return reply.code(404).send({ error: { message: "User not found" } });
+        }
+        userStore.deleteUser(id);
+        return { ok: true };
+      }
+    );
   }
 
   server.get("/dashboard/api/config", async () => ({

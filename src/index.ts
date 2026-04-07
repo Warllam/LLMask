@@ -20,7 +20,7 @@ async function main() {
       }
     : undefined;
 
-  const server = buildServer(config);
+  const server = await buildServer(config);
 
   try {
     await server.listen({ host: config.host, port: config.port, ...(https ? { https } : {}) });
