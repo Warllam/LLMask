@@ -1,5 +1,8 @@
 # LLMask
 
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
+
 **Mask sensitive data before it reaches any LLM**
 
 LLMask is an OpenAI-compatible proxy that automatically detects and masks sensitive information (PII, credentials, business data) in your prompts before they reach language models. The masked data is stored locally and automatically remapped in responses.
@@ -205,7 +208,9 @@ See [LICENSE](./LICENSE) for details.
 
 ## Contributing
 
-Contributions are welcome! Please open an issue first to discuss what you'd like to change.
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get started — fork, branch, PR process, and testing requirements. Please open an issue first for non-trivial changes so we can align on the approach.
+
+Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
 ---
 
