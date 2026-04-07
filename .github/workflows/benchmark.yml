@@ -1,0 +1,136 @@
+name: Benchmark
+
+on:
+  pull_request:
+    paths:
+      - 'benchmarks/**'
+      - 'src/**'
+
+jobs:
+  benchmark:
+    name: Run Benchmarks
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache root node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-20-${{ hashFiles('package-lock.json') }}
+          restore-keys: node-modules-20-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run benchmarks (dry-run, no LLM calls)
+        run: npx tsx benchmarks/runner.ts --all --dry-run
+
+      - name: Check thresholds and generate report
+        id: report
+        run: |
+          node --input-type=module << 'SCRIPT'
+          import { readdirSync, readFileSync, writeFileSync } from 'fs';
+          import { join } from 'path';
+
+          const resultsDir = 'benchmarks/results';
+          const files = readdirSync(resultsDir).filter(f => f.endsWith('.json')).sort();
+          const latest = files[files.length - 1];
+          const data = JSON.parse(readFileSync(join(resultsDir, latest), 'utf-8'));
+
+          // Thresholds: strategy id → minimum average privacy score (%)
+          const thresholds = { aggressive: 100, 'values-only': 80, 'pii-only': 60 };
+
+          // Compute per-strategy privacy averages
+          const buckets = {};
+          for (const r of data.results) {
+            const sid = r.score.strategyId;
+            if (sid === 'baseline') continue;
+            if (!buckets[sid]) buckets[sid] = { privacy: [], semantic: [] };
+            if (r.score.privacy >= 0) buckets[sid].privacy.push(r.score.privacy);
+            if (r.score.semanticPreservation >= 0) buckets[sid].semantic.push(r.score.semanticPreservation);
+          }
+
+          const avg = arr => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+
+          const rows = [];
+          let anyFailed = false;
+
+          for (const [sid, bucket] of Object.entries(buckets)) {
+            const privScore = avg(bucket.privacy);
+            const semScore = avg(bucket.semantic);
+            const threshold = thresholds[sid] ?? null;
+            let status = '—';
+            if (threshold !== null && privScore !== null) {
+              const pass = privScore >= threshold;
+              if (!pass) anyFailed = true;
+              status = pass ? '✅ pass' : `❌ FAIL (need ${threshold}%)`;
+            }
+            rows.push({ sid, privScore, semScore, threshold, status });
+          }
+
+          const lines = [
+            '## Benchmark Results',
+            '',
+            `> Dry-run mode — masking quality measured without LLM calls.`,
+            `> Results file: \`${latest}\``,
+            '',
+            '| Strategy | Privacy | Semantic | Threshold | Status |',
+            '|---|---|---|---|---|',
+          ];
+
+          for (const r of rows) {
+            lines.push(
+              `| ${r.sid} | ${r.privScore ?? 'N/A'}% | ${r.semScore ?? 'N/A'}% | ${r.threshold !== null ? r.threshold + '%' : '—'} | ${r.status} |`
+            );
+          }
+
+          if (anyFailed) {
+            lines.push('', '> ⚠️ **Privacy regression detected.** One or more strategies fell below the required threshold.');
+          }
+
+          const report = lines.join('\n');
+          writeFileSync('benchmark-report.md', report);
+          process.stdout.write(report + '\n');
+
+          if (anyFailed) process.exit(1);
+          SCRIPT
+
+      - name: Post PR comment
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('benchmark-report.md', 'utf8');
+            // Find existing bot comment to update instead of spamming new ones
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('## Benchmark Results')
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
