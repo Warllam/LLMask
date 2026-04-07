@@ -10,6 +10,11 @@ import type {
   ConfigInfo,
   ActivityEntry,
   LatencyStats,
+  AuditLogPage,
+  AuditLogQuery,
+  GdprEvent,
+  RetentionInfo,
+  EraseResult,
 } from "./types";
 
 const BASE = "/dashboard/api";
@@ -88,4 +93,33 @@ export const api = {
   configInfo: () => fetchJson<ConfigInfo>("/config/info"),
   recentActivity: (limit = 50) => fetchJson<ActivityEntry[]>(`/activity?limit=${limit}`),
   latencyStats: () => fetchJson<LatencyStats>("/stats/latency"),
+
+  // ── GDPR ──────────────────────────────────────────────────────────────────
+  auditLogs: (query: AuditLogQuery = {}) => {
+    const params = new URLSearchParams();
+    if (query.page)     params.set("page", String(query.page));
+    if (query.pageSize) params.set("pageSize", String(query.pageSize));
+    if (query.dateFrom) params.set("dateFrom", query.dateFrom);
+    if (query.dateTo)   params.set("dateTo", query.dateTo);
+    if (query.strategy) params.set("strategy", query.strategy);
+    if (query.provider) params.set("provider", query.provider);
+    const qs = params.toString();
+    return fetchJson<AuditLogPage>(`/audit${qs ? `?${qs}` : ""}`);
+  },
+  gdprEvents: (limit = 100) => fetchJson<GdprEvent[]>(`/gdpr/events?limit=${limit}`),
+  gdprRetention: () => fetchJson<RetentionInfo>("/gdpr/retention"),
+  gdprErase: async (term: string): Promise<EraseResult> => {
+    const res = await fetch(`${BASE}/gdpr/erase`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ term }),
+    });
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return res.json() as Promise<EraseResult>;
+  },
+  gdprExportBlob: async (): Promise<Blob> => {
+    const res = await fetch(`${BASE}/gdpr/export`);
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return res.blob();
+  },
 };

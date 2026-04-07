@@ -1,4 +1,4 @@
-import { Shield, MessageSquare, Home, Keyboard, Menu, Activity, Settings, HeartPulse } from "lucide-react";
+import { Shield, MessageSquare, Home, Keyboard, Menu, Activity, Settings, HeartPulse, Lock } from "lucide-react";
 import { useState } from "react";
 import type { View } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ const viewConfig: Record<View, { label: string; icon: typeof Home }> = {
   health: { label: "System Health", icon: HeartPulse },
   chat: { label: "Chat", icon: MessageSquare },
   conversation: { label: "Conversation", icon: Shield },
+  gdpr: { label: "GDPR Compliance", icon: Lock },
 };
 
 const shortcuts = [

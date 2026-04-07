@@ -14,6 +14,7 @@ const Chat = lazy(() => import("@/components/views/Chat").then((m) => ({ default
 const ActivityFeed = lazy(() => import("@/components/views/ActivityFeed").then((m) => ({ default: m.ActivityFeed })));
 const Configuration = lazy(() => import("@/components/views/Configuration").then((m) => ({ default: m.Configuration })));
 const SystemHealth = lazy(() => import("@/components/views/SystemHealth").then((m) => ({ default: m.SystemHealth })));
+const GdprCompliance = lazy(() => import("@/components/views/GdprCompliance").then((m) => ({ default: m.GdprCompliance })));
 
 function ViewFallback() {
   return (
@@ -59,6 +60,9 @@ export function App() {
       } else if (hash === "health") {
         setCurrentView("health");
         setSelectedSession(null);
+      } else if (hash === "gdpr") {
+        setCurrentView("gdpr");
+        setSelectedSession(null);
       } else if (hash === "chat") {
         setChatSessionId(null);
         setCurrentView("chat");
@@ -98,6 +102,8 @@ export function App() {
       window.location.hash = "config";
     } else if (view === "health") {
       window.location.hash = "health";
+    } else if (view === "gdpr") {
+      window.location.hash = "gdpr";
     } else {
       window.location.hash = "";
     }
@@ -194,6 +200,7 @@ export function App() {
               {currentView === "activity" && <ActivityFeed />}
               {currentView === "config" && <Configuration />}
               {currentView === "health" && <SystemHealth />}
+              {currentView === "gdpr" && <GdprCompliance />}
               {currentView === "chat" && <Chat sessionId={chatSessionId} onSessionUpdate={refreshSessions} />}
             </Suspense>
             </ErrorBoundary>
