@@ -299,6 +299,86 @@ export async function buildServer(config: AppConfig): Promise<FastifyInstance> {
     });
   });
 
+  // ── Browser extension: text mask / remap ─────────────────────────────
+  // These lightweight endpoints are called by the LLMask Chrome extension via
+  // its background service worker. They mask plain text (no file upload, no
+  // LLM proxy) and return the pseudonym → original mappings for response remap.
+  //
+  // CORS headers are added so the extension origin is accepted.
+
+  const extensionCorsHeaders = {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "POST, OPTIONS",
+    "access-control-allow-headers": "content-type",
+  } as const;
+
+  // Preflight for both routes
+  server.options("/v1/text/mask", async (_request, reply) => {
+    return reply.code(204).headers(extensionCorsHeaders).send();
+  });
+
+  server.options("/v1/text/remap", async (_request, reply) => {
+    return reply.code(204).headers(extensionCorsHeaders).send();
+  });
+
+  server.post("/v1/text/mask", async (request, reply) => {
+    reply.headers(extensionCorsHeaders);
+
+    const body = request.body as { text?: unknown; scope_id?: unknown } | null;
+    if (!body?.text || typeof body.text !== "string") {
+      return reply.code(400).send({
+        error: { message: "Missing or invalid 'text' field", type: "invalid_request_error", code: "MISSING_TEXT" }
+      });
+    }
+
+    const scopeId = typeof body.scope_id === "string" && body.scope_id ? body.scope_id : randomUUID();
+    const detection = modules.detectionEngine.detect({ fileName: "browser-input.txt", content: body.text });
+    const rewrite = modules.rewriteEngine.rewriteUnknownPayload(
+      { content: body.text },
+      detection,
+      { scopeId }
+    );
+
+    const rewrittenContent = (rewrite.rewrittenPayload as Record<string, unknown>)?.content;
+    const maskedText = typeof rewrittenContent === "string" ? rewrittenContent : body.text;
+
+    return reply.code(200).send({
+      masked_text: maskedText,
+      scope_id: scopeId,
+      entity_count: rewrite.transformedCount,
+    });
+  });
+
+  server.post("/v1/text/remap", async (request, reply) => {
+    reply.headers(extensionCorsHeaders);
+
+    const body = request.body as { scope_id?: unknown; text?: unknown } | null;
+    if (!body?.scope_id || typeof body.scope_id !== "string") {
+      return reply.code(400).send({
+        error: { message: "Missing or invalid 'scope_id' field", type: "invalid_request_error", code: "MISSING_SCOPE_ID" }
+      });
+    }
+
+    const mappings = modules.mappingStore.listMappings(body.scope_id);
+    const replacements = mappings
+      .map((entry) => ({ from: entry.pseudonym, to: entry.originalValue }))
+      // Sort longest pseudonym first so partial-match replacements can't interfere
+      .sort((a, b) => b.from.length - a.from.length);
+
+    // Optionally also remap a provided text string
+    let remappedText: string | undefined;
+    if (typeof body.text === "string" && body.text) {
+      const remapped = modules.remapEngine.remapJsonResponse({ content: body.text }, body.scope_id, mappings);
+      const remappedContent = (remapped as Record<string, unknown>)?.content;
+      remappedText = typeof remappedContent === "string" ? remappedContent : body.text;
+    }
+
+    return reply.code(200).send({
+      replacements,
+      ...(remappedText !== undefined && { remapped_text: remappedText }),
+    });
+  });
+
   // ── Dashboard (core: session logs & mappings) ──────────────────────
   registerDashboardRoutes(server, {
     mappingStore: modules.mappingStore,

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLMask Privacy Shield</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="popup-body">
+
+  <header class="popup-header">
+    <span class="popup-icon">&#128274;</span>
+    <div>
+      <h1 class="popup-title">LLMask</h1>
+      <p class="popup-subtitle">Privacy Shield</p>
+    </div>
+    <div class="toggle-wrap">
+      <label class="toggle" title="Enable / disable masking">
+        <input type="checkbox" id="toggle-enabled" />
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="status-row">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-text" class="status-text">Checking…</span>
+    </div>
+  </section>
+
+  <section class="section">
+    <label class="field-label" for="proxy-url">Proxy URL</label>
+    <div class="input-row">
+      <input
+        type="text"
+        id="proxy-url"
+        class="text-input"
+        placeholder="http://localhost:3456"
+        spellcheck="false"
+      />
+      <button id="btn-check" class="btn btn-secondary" title="Test connection">&#10003;</button>
+    </div>
+  </section>
+
+  <section class="section stats-section">
+    <div class="stat-card">
+      <div class="stat-value" id="stat-masked">—</div>
+      <div class="stat-label">Messages masked today</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-entities">—</div>
+      <div class="stat-label">Entities protected</div>
+    </div>
+  </section>
+
+  <footer class="popup-footer">
+    <a
+      href="https://github.com/your-org/llmask"
+      target="_blank"
+      rel="noopener"
+      class="footer-link"
+    >LLMask docs</a>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
