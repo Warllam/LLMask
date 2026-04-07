@@ -4,8 +4,10 @@ import { ToastProvider } from "@/components/ui/toast";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Welcome } from "@/components/views/Welcome";
+import { LoginPage } from "@/components/auth/LoginPage";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 import { api } from "@/lib/api";
+import { authStore, logout, type AuthUser } from "@/lib/auth";
 import type { SessionSummary, View } from "@/lib/types";
 
 // Lazy-loaded heavy views
@@ -27,6 +29,18 @@ function ViewFallback() {
 }
 
 export function App() {
+  // Auth state — initialized from in-memory store (populated if user already logged in this session)
+  const [authedUser, setAuthedUser] = useState<AuthUser | null>(() => authStore.getUser());
+
+  const handleLogin = useCallback((user: AuthUser) => {
+    setAuthedUser(user);
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    await logout();
+    setAuthedUser(null);
+  }, []);
+
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
@@ -178,6 +192,15 @@ export function App() {
   const sessionTitle =
     sessions.find((s) => s.traceId === selectedSession)?.title ?? null;
 
+  // Show login page when unauthenticated
+  if (!authedUser) {
+    return (
+      <ThemeProvider>
+        <LoginPage onLogin={handleLogin} />
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider>
       <ToastProvider>
@@ -200,6 +223,8 @@ export function App() {
             currentView={currentView}
             sessionTitle={sessionTitle}
             onToggleSidebar={() => setSidebarCollapsed((p) => !p)}
+            currentUser={authedUser}
+            onLogout={handleLogout}
           />
 
           <main className="flex-1 overflow-hidden" role="main" aria-label="Main content">
