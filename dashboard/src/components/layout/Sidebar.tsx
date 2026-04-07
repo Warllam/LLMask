@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, type ElementType } from "react";
 import {
   Search,
   Shield,
@@ -16,6 +16,8 @@ import {
   Settings,
   HeartPulse,
   Lock,
+  ClipboardList,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -109,61 +111,50 @@ export function Sidebar({
 
   if (collapsed) {
     return (
-      <aside className="hidden md:flex flex-col items-center w-14 border-r border-border bg-card py-3 gap-2" role="navigation" aria-label="Collapsed sidebar">
+      <aside className="hidden md:flex flex-col items-center w-14 border-r border-border bg-card py-3 gap-1" role="navigation" aria-label="Collapsed sidebar">
         <Button variant="ghost" size="icon" onClick={onToggleCollapse} className="mb-2" aria-label="Expand sidebar">
           <PanelLeft className="h-4 w-4" />
         </Button>
-        <div className="w-8 h-px bg-border" />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onNavigate("welcome")}
-          className={cn(currentView === "welcome" && "bg-primary/10 text-primary")}
-        >
-          <Home className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onNavigate("activity")}
-          className={cn(currentView === "activity" && "bg-primary/10 text-primary")}
-        >
-          <Activity className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onNavigate("chat")}
-          className={cn(currentView === "chat" && "bg-primary/10 text-primary")}
-        >
-          <MessageSquare className="h-4 w-4" />
-        </Button>
+        <div className="w-8 h-px bg-border mb-1" />
+        {(
+          [
+            { view: "welcome", icon: Home, label: "Accueil" },
+            { view: "requestlog", icon: ClipboardList, label: "Requêtes" },
+            { view: "activity", icon: Activity, label: "Activité" },
+            { view: "chat", icon: MessageSquare, label: "Chat" },
+          ] as const
+        ).map(({ view, icon: Icon, label }) => (
+          <Button
+            key={view}
+            variant="ghost"
+            size="icon"
+            onClick={() => onNavigate(view)}
+            className={cn(currentView === view && "bg-primary/10 text-primary")}
+            title={label}
+          >
+            <Icon className="h-4 w-4" />
+          </Button>
+        ))}
         <div className="flex-1" />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onNavigate("health")}
-          className={cn(currentView === "health" && "bg-primary/10 text-primary")}
-        >
-          <HeartPulse className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onNavigate("gdpr")}
-          className={cn(currentView === "gdpr" && "bg-primary/10 text-primary")}
-          title="GDPR Compliance"
-        >
-          <Lock className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onNavigate("config")}
-          className={cn(currentView === "config" && "bg-primary/10 text-primary")}
-        >
-          <Settings className="h-4 w-4" />
-        </Button>
+        {(
+          [
+            { view: "health", icon: HeartPulse, label: "Health" },
+            { view: "gdpr", icon: Lock, label: "GDPR Compliance" },
+            { view: "settings", icon: SlidersHorizontal, label: "Réglages" },
+            { view: "config", icon: Settings, label: "Config" },
+          ] as const
+        ).map(({ view, icon: Icon, label }) => (
+          <Button
+            key={view}
+            variant="ghost"
+            size="icon"
+            onClick={() => onNavigate(view)}
+            className={cn(currentView === view && "bg-primary/10 text-primary")}
+            title={label}
+          >
+            <Icon className="h-4 w-4" />
+          </Button>
+        ))}
         <Button variant="ghost" size="icon" onClick={toggleTheme} data-theme-toggle>
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
@@ -352,80 +343,52 @@ export function Sidebar({
 
       {/* Nav bottom */}
       <div className="border-t border-border p-2 space-y-0.5">
-        <button
-          onClick={() => onNavigate("welcome")}
-          className={cn(
-            "flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors",
-            currentView === "welcome"
-              ? "bg-primary/10 text-primary font-medium"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          )}
-        >
-          <Home className="h-4 w-4" />
-          Overview
-        </button>
-        <button
-          onClick={() => onNavigate("activity")}
-          className={cn(
-            "flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors",
-            currentView === "activity"
-              ? "bg-primary/10 text-primary font-medium"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          )}
-        >
-          <Activity className="h-4 w-4" />
-          Activity
-        </button>
-        <button
-          onClick={() => onNavigate("chat")}
-          className={cn(
-            "flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors",
-            currentView === "chat"
-              ? "bg-primary/10 text-primary font-medium"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          )}
-        >
-          <MessageSquare className="h-4 w-4" />
-          Chat
-        </button>
-        <button
-          onClick={() => onNavigate("health")}
-          className={cn(
-            "flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors",
-            currentView === "health"
-              ? "bg-primary/10 text-primary font-medium"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          )}
-        >
-          <HeartPulse className="h-4 w-4" />
-          Health
-        </button>
-        <button
-          onClick={() => onNavigate("gdpr")}
-          className={cn(
-            "flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors",
-            currentView === "gdpr"
-              ? "bg-primary/10 text-primary font-medium"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          )}
-        >
-          <Lock className="h-4 w-4" />
-          GDPR
-        </button>
-        <button
-          onClick={() => onNavigate("config")}
-          className={cn(
-            "flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors",
-            currentView === "config"
-              ? "bg-primary/10 text-primary font-medium"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          )}
-        >
-          <Settings className="h-4 w-4" />
-          Config
-        </button>
+        <NavItem icon={Home} view="welcome" label="Accueil" sublabel="Overview" currentView={currentView} onNavigate={onNavigate} />
+        <NavItem icon={ClipboardList} view="requestlog" label="Journal des requêtes" sublabel="Request log" currentView={currentView} onNavigate={onNavigate} />
+        <NavItem icon={Activity} view="activity" label="Activité en direct" sublabel="Live activity" currentView={currentView} onNavigate={onNavigate} />
+        <NavItem icon={MessageSquare} view="chat" label="Assistant IA" sublabel="AI chat" currentView={currentView} onNavigate={onNavigate} />
+        <div className="h-px bg-border/50 my-1" />
+        <NavItem icon={HeartPulse} view="health" label="État du système" sublabel="System health" currentView={currentView} onNavigate={onNavigate} />
+        <NavItem icon={Lock} view="gdpr" label="Conformité RGPD" sublabel="GDPR compliance" currentView={currentView} onNavigate={onNavigate} />
+        <NavItem icon={SlidersHorizontal} view="settings" label="Réglages" sublabel="Settings" currentView={currentView} onNavigate={onNavigate} />
+        <NavItem icon={Settings} view="config" label="Configuration" sublabel="Advanced config" currentView={currentView} onNavigate={onNavigate} />
       </div>
     </aside>
     </>
+  );
+}
+
+function NavItem({
+  icon: Icon,
+  view,
+  label,
+  sublabel,
+  currentView,
+  onNavigate,
+}: {
+  icon: ElementType;
+  view: View;
+  label: string;
+  sublabel: string;
+  currentView: View;
+  onNavigate: (view: View) => void;
+}) {
+  const active = currentView === view;
+  return (
+    <button
+      onClick={() => onNavigate(view)}
+      className={cn(
+        "flex items-center gap-2.5 w-full px-3 py-2 rounded-lg transition-colors text-left",
+        active
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+      )}
+    >
+      <Icon className="h-4 w-4 flex-shrink-0" />
+      <div className="min-w-0">
+        <div className={cn("text-[13px] leading-tight truncate", active && "font-semibold")}>{label}</div>
+        <div className="text-[10px] opacity-60 truncate">{sublabel}</div>
+      </div>
+    </button>
   );
 }

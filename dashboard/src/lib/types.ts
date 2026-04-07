@@ -205,7 +205,15 @@ export interface ActivityEntry {
   status: "success" | "error";
 }
 
-export type View = "welcome" | "conversation" | "chat" | "activity" | "config" | "health" | "gdpr";
+export type View = "welcome" | "conversation" | "chat" | "activity" | "config" | "health" | "gdpr" | "settings" | "requestlog";
+
+export type MaskingStrategy = "pseudonymization" | "redaction" | "generalization" | "tokenization";
+
+export interface AppSettings {
+  maskingStrategy: MaskingStrategy;
+  retentionDays: number;
+  provider: string;
+}
 
 // ── GDPR Types ────────────────────────────────────────────────────────────────
 

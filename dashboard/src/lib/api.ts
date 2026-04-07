@@ -15,6 +15,7 @@ import type {
   GdprEvent,
   RetentionInfo,
   EraseResult,
+  AppSettings,
 } from "./types";
 
 const BASE = "/dashboard/api";
@@ -122,4 +123,17 @@ export const api = {
     if (!res.ok) throw new Error(`API error ${res.status}`);
     return res.blob();
   },
+
+  // ── Settings ──────────────────────────────────────────────────────────────
+  getSettings: () => fetchJson<AppSettings>("/settings"),
+  updateSettings: async (settings: Partial<AppSettings>) => {
+    const res = await fetch(`${BASE}/settings`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    });
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return res.json() as Promise<{ ok: true; settings: AppSettings }>;
+  },
+  recentRequests: (limit = 50) => fetchJson<RequestLogEntry[]>(`/requests?limit=${limit}`),
 };
