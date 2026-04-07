@@ -1,0 +1,1321 @@
+openapi: "3.0.3"
+info:
+  title: LLMask API
+  version: "0.1.0"
+  description: |
+    **LLMask** is an OpenAI-compatible privacy proxy that detects and masks sensitive data
+    (PII, secrets, credentials) before forwarding requests to any LLM provider, then
+    remaps pseudonyms back in the response.
+
+    ## Authentication
+    When `ADMIN_KEY` is set in the environment, all `/dashboard/api/*` routes require the
+    key to be supplied either as:
+    - Query parameter: `?key=<admin-key>`
+    - Header: `X-LLMask-Key: <admin-key>`
+
+    Proxy routes (`/v1/*`) have no built-in authentication in the community edition.
+
+  contact:
+    name: LLMask OSS
+  license:
+    name: Apache-2.0
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Health
+    description: Service health and status
+  - name: Proxy
+    description: OpenAI-compatible LLM proxy endpoints — PII is masked before forwarding
+  - name: Files
+    description: File anonymization
+  - name: Dashboard – Config
+    description: Provider configuration and model catalogue
+  - name: Dashboard – Mappings
+    description: Inspect PII/pseudonym mappings stored by the proxy
+  - name: Dashboard – Sessions
+    description: Request sessions grouped by trace ID
+  - name: Dashboard – Requests
+    description: Individual proxied request logs
+  - name: Dashboard – Chat
+    description: Built-in chat interface that masks, forwards, and remaps in one call
+  - name: Dashboard – DSI
+    description: Data Security Insights — detect sensitive-data leaks in stored mappings
+  - name: Dashboard – Live Events
+    description: Server-Sent Events feed of real-time masking activity
+
+# ─────────────────────────────────────────────────────────────────────────────
+paths:
+
+  # ── Health ────────────────────────────────────────────────────────────────
+  /health:
+    get:
+      tags: [Health]
+      summary: Service health check
+      description: Returns service status, uptime, memory usage, and configuration summary.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+                service: llmask
+                tier: community
+                edition: community
+                mode: proxy
+                primaryProvider: openai
+                fallbackProvider: none
+                authEnabled: false
+                uptime: 3600
+                memoryMb: 128
+
+  # ── Proxy ─────────────────────────────────────────────────────────────────
+  /v1/chat/completions:
+    post:
+      tags: [Proxy]
+      summary: Chat completions proxy (OpenAI-compatible)
+      description: |
+        Drop-in replacement for the OpenAI `/v1/chat/completions` endpoint.
+        LLMask detects PII and secrets in the request, replaces them with pseudonyms,
+        forwards the sanitised request to the configured provider, then remaps
+        pseudonyms back in the response.
+
+        Streaming (`"stream": true`) is supported and returns Server-Sent Events in the
+        standard OpenAI format.
+      operationId: proxyChatCompletions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatCompletionsRequest"
+            example:
+              model: gpt-4o
+              messages:
+                - role: user
+                  content: "Summarise the email from john.doe@acme.com about project Falcon"
+              stream: false
+      responses:
+        "200":
+          description: Chat completion (non-streaming) or SSE stream
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatCompletionsResponse"
+            text/event-stream:
+              schema:
+                type: string
+                description: Server-Sent Events stream in OpenAI delta format
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+
+  /v1/messages:
+    post:
+      tags: [Proxy]
+      summary: Anthropic Messages API proxy
+      description: |
+        Drop-in replacement for the Anthropic `/v1/messages` endpoint.
+        Accepts the Anthropic Messages request format; LLMask masks PII before
+        forwarding to the configured provider.
+      operationId: proxyMessages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnthropicMessagesRequest"
+            example:
+              model: claude-sonnet-4-20250514
+              max_tokens: 1024
+              messages:
+                - role: user
+                  content: "Analyse the report for Alice Smith at alice@example.com"
+      responses:
+        "200":
+          description: Anthropic messages response or SSE stream
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Anthropic Messages API response (passthrough)
+            text/event-stream:
+              schema:
+                type: string
+                description: Anthropic SSE stream
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+
+  /v1/responses:
+    post:
+      tags: [Proxy]
+      summary: OpenAI Responses API proxy
+      description: |
+        Drop-in replacement for the OpenAI `/v1/responses` endpoint.
+        Uses the structured `input` array format introduced in the Responses API.
+      operationId: proxyResponses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResponsesRequest"
+            example:
+              model: gpt-4o
+              input:
+                - type: message
+                  role: user
+                  content:
+                    - type: input_text
+                      text: "Summarise the data for SSN 123-45-6789"
+              stream: true
+      responses:
+        "200":
+          description: Responses API result or SSE stream
+          content:
+            application/json:
+              schema:
+                type: object
+                description: OpenAI Responses API response (passthrough)
+            text/event-stream:
+              schema:
+                type: string
+                description: OpenAI Responses API SSE stream
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+
+  # ── Files ─────────────────────────────────────────────────────────────────
+  /v1/files/anonymize:
+    post:
+      tags: [Files]
+      summary: Anonymize a file
+      description: |
+        Upload a file; LLMask extracts its text, detects PII/secrets, and returns
+        anonymised content.
+
+        **Supported file types:**
+        - Text: `.txt`, `.md`, `.json`, `.csv`, `.xml`, `.html`
+        - Documents: `.pdf`, `.docx`, `.xlsx`, `.pptx`
+        - Images: `.jpg`, `.jpeg`, `.png`, `.webp` (EXIF metadata is stripped)
+
+        Maximum file size: **10 MB**.
+      operationId: anonymizeFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The file to anonymise
+                scope_id:
+                  type: string
+                  description: |
+                    Scope identifier for this mapping session. If omitted a random UUID
+                    is generated. Use the same scope_id across requests to share the
+                    pseudonym dictionary.
+      responses:
+        "200":
+          description: File anonymised successfully
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/AnonymizeTextResponse"
+                  - $ref: "#/components/schemas/AnonymizeImageResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          description: File blocked by LLMask policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: Failed to extract text from the document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  # ── Dashboard – Config ────────────────────────────────────────────────────
+  /dashboard/api/config:
+    get:
+      tags: [Dashboard – Config]
+      summary: Get provider configuration
+      description: Returns the primary and fallback LLM provider configured for this instance.
+      operationId: getDashboardConfig
+      security:
+        - adminKey: []
+      responses:
+        "200":
+          description: Provider configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigResponse"
+              example:
+                primaryProvider: openai
+                fallbackProvider: anthropic
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /dashboard/api/models:
+    get:
+      tags: [Dashboard – Config]
+      summary: List available models
+      description: Returns all models available across registered providers.
+      operationId: getDashboardModels
+      security:
+        - adminKey: []
+      responses:
+        "200":
+          description: Model catalogue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ── Dashboard – Mappings ──────────────────────────────────────────────────
+  /dashboard/api/scopes:
+    get:
+      tags: [Dashboard – Mappings]
+      summary: List all masking scopes
+      description: Returns all scope IDs (one per proxied session or file upload).
+      operationId: listScopes
+      security:
+        - adminKey: []
+      responses:
+        "200":
+          description: Array of scope IDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: "chat-1717000000000"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /dashboard/api/mappings/{scopeId}:
+    get:
+      tags: [Dashboard – Mappings]
+      summary: List mappings for a scope
+      description: Returns every original→pseudonym mapping that was created within the given scope.
+      operationId: listMappings
+      security:
+        - adminKey: []
+      parameters:
+        - $ref: "#/components/parameters/scopeId"
+      responses:
+        "200":
+          description: Array of mappings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Mapping"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /dashboard/api/recent:
+    get:
+      tags: [Dashboard – Mappings]
+      summary: List recent mappings
+      description: Returns the most recently created mappings across all scopes.
+      operationId: listRecentMappings
+      security:
+        - adminKey: []
+      parameters:
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Array of recent mappings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Mapping"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ── Dashboard – Stats ─────────────────────────────────────────────────────
+  /dashboard/api/stats:
+    get:
+      tags: [Dashboard – Requests]
+      summary: Get statistics
+      description: Returns aggregate statistics — total requests, masked entities, scopes, etc.
+      operationId: getStats
+      security:
+        - adminKey: []
+      responses:
+        "200":
+          description: Statistics object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ── Dashboard – Requests ──────────────────────────────────────────────────
+  /dashboard/api/requests:
+    get:
+      tags: [Dashboard – Requests]
+      summary: List request logs
+      description: Returns proxied request logs in reverse-chronological order.
+      operationId: listRequests
+      security:
+        - adminKey: []
+      parameters:
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Array of request log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RequestLog"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /dashboard/api/requests/{id}:
+    get:
+      tags: [Dashboard – Requests]
+      summary: Get a single request log
+      description: Returns the full log entry for a single proxied request, including original and rewritten bodies.
+      operationId: getRequest
+      security:
+        - adminKey: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Numeric request log ID
+      responses:
+        "200":
+          description: Request log entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestLog"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Dashboard – Sessions ──────────────────────────────────────────────────
+  /dashboard/api/sessions:
+    get:
+      tags: [Dashboard – Sessions]
+      summary: List sessions
+      description: Returns sessions (grouped by trace ID) in reverse-chronological order.
+      operationId: listSessions
+      security:
+        - adminKey: []
+      parameters:
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Array of session summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Session"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /dashboard/api/sessions/{traceId}:
+    get:
+      tags: [Dashboard – Sessions]
+      summary: Get session request logs
+      description: Returns all request logs that belong to the given trace ID (session).
+      operationId: getSession
+      security:
+        - adminKey: []
+      parameters:
+        - $ref: "#/components/parameters/traceId"
+      responses:
+        "200":
+          description: Array of request logs for this session
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RequestLog"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      tags: [Dashboard – Sessions]
+      summary: Delete a session
+      description: Permanently deletes all request logs and mappings for the given trace ID.
+      operationId: deleteSession
+      security:
+        - adminKey: []
+      parameters:
+        - $ref: "#/components/parameters/traceId"
+      responses:
+        "200":
+          description: Session deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /dashboard/api/sessions/{traceId}/mappings:
+    get:
+      tags: [Dashboard – Sessions]
+      summary: Get session mappings
+      description: Returns all PII mappings that were created during this session.
+      operationId: getSessionMappings
+      security:
+        - adminKey: []
+      parameters:
+        - $ref: "#/components/parameters/traceId"
+      responses:
+        "200":
+          description: Array of mappings for this session
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Mapping"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /dashboard/api/sessions/{traceId}/title:
+    put:
+      tags: [Dashboard – Sessions]
+      summary: Update session title
+      description: Sets a human-readable title for a session (max 100 characters).
+      operationId: updateSessionTitle
+      security:
+        - adminKey: []
+      parameters:
+        - $ref: "#/components/parameters/traceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                  maxLength: 100
+                  example: "Q4 report analysis"
+      responses:
+        "200":
+          description: Title updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  title:
+                    type: string
+                    example: "Q4 report analysis"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ── Dashboard – Chat ──────────────────────────────────────────────────────
+  /dashboard/api/chat/preview:
+    post:
+      tags: [Dashboard – Chat]
+      summary: Preview masking (dry run)
+      description: |
+        Runs the detection and rewrite pipeline on the supplied message without
+        forwarding to any LLM. Returns the masked text and the list of detected
+        entities so the user can review what will be anonymised before sending.
+      operationId: chatPreview
+      security:
+        - adminKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatPreviewRequest"
+            example:
+              message: "Contact Alice Smith at alice.smith@acme.com or call +1-555-0123"
+              sessionId: "my-session-001"
+      responses:
+        "200":
+          description: Masking preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatPreviewResponse"
+              example:
+                original: "Contact Alice Smith at alice.smith@acme.com or call +1-555-0123"
+                masked: "Contact [PERSON-1] at [EMAIL-1] or call [PHONE-1]"
+                entities:
+                  - original: "Alice Smith"
+                    pseudonym: "[PERSON-1]"
+                    kind: PERSON
+                  - original: "alice.smith@acme.com"
+                    pseudonym: "[EMAIL-1]"
+                    kind: EMAIL
+                  - original: "+1-555-0123"
+                    pseudonym: "[PHONE-1]"
+                    kind: PHONE
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /dashboard/api/chat:
+    post:
+      tags: [Dashboard – Chat]
+      summary: Chat with privacy proxy
+      description: |
+        All-in-one endpoint used by the built-in dashboard chat UI.
+
+        1. Detects and masks PII/secrets in the message.
+        2. Forwards the sanitised payload to the configured LLM provider.
+        3. Streams the response back as SSE.
+
+        The SSE stream contains three event types:
+        - **Standard delta events** — forwarded verbatim from the upstream provider.
+        - `llmask-obfuscated` — sent first, contains the masked version of the user message.
+        - `llmask-remap` — sent last (before `[DONE]`), contains the pseudonym→original mapping table.
+      operationId: chat
+      security:
+        - adminKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+            example:
+              message: "What are the key risks for alice@example.com's project?"
+              model: gpt-4o
+              sessionId: "my-session-001"
+      responses:
+        "200":
+          description: SSE stream with masked response
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-Sent Events stream.
+                  Special LLMask events:
+                  ```
+                  data: {"type":"llmask-obfuscated","text":"<masked user message>"}
+
+                  data: {"type":"llmask-remap","mappings":[["[EMAIL-1]","alice@example.com"]],"scopeId":"..."}
+                  ```
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+
+  # ── Dashboard – DSI ───────────────────────────────────────────────────────
+  /dashboard/api/dsi/stats:
+    get:
+      tags: [Dashboard – DSI]
+      summary: Data Security Insights statistics
+      description: Returns aggregate counts of detected entity types across all stored mappings.
+      operationId: getDsiStats
+      security:
+        - adminKey: []
+      responses:
+        "200":
+          description: DSI statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DsiStatsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /dashboard/api/dsi/leaks:
+    get:
+      tags: [Dashboard – DSI]
+      summary: Scan for data leaks
+      description: |
+        Scans stored request/response logs for occurrences of original (unmasked) values,
+        which would indicate that sensitive data leaked through to the LLM response.
+      operationId: getDsiLeaks
+      security:
+        - adminKey: []
+      responses:
+        "200":
+          description: Leak scan results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DsiLeaksResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ── Dashboard – Live Events ───────────────────────────────────────────────
+  /dashboard/api/live:
+    get:
+      tags: [Dashboard – Live Events]
+      summary: Live masking event stream (SSE)
+      description: |
+        Server-Sent Events feed. Emits a `masking` event each time the proxy masks a
+        request, plus a `heartbeat` comment every 30 seconds to keep the connection alive.
+
+        **Initial event on connect:**
+        ```
+        data: {"type":"connected"}
+        ```
+
+        **Masking event:**
+        ```
+        data: {"type":"masking","scopeId":"...","transformedCount":3,...}
+        ```
+      operationId: getLiveEvents
+      security:
+        - adminKey: []
+      responses:
+        "200":
+          description: SSE stream of live masking events
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+# ─────────────────────────────────────────────────────────────────────────────
+components:
+
+  securitySchemes:
+    adminKey:
+      type: apiKey
+      in: header
+      name: X-LLMask-Key
+      description: |
+        Admin key for dashboard API access. Set via `ADMIN_KEY` environment variable.
+        Can also be passed as query parameter `?key=<admin-key>`.
+
+  parameters:
+    scopeId:
+      name: scopeId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Masking scope identifier
+      example: "chat-1717000000000"
+
+    traceId:
+      name: traceId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Session trace identifier
+      example: "chat-1717000000000"
+
+    limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 50
+      description: Maximum number of results to return
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    Unauthorized:
+      description: Missing or invalid admin key
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+          example:
+            error:
+              message: "Unauthorized — provide admin key via ?key= or x-llmask-key header"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    BadGateway:
+      description: Upstream LLM provider error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+  schemas:
+
+    # ── Errors ───────────────────────────────────────────────────────────────
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            code:
+              type: string
+            param:
+              type: string
+              nullable: true
+
+    # ── Health ────────────────────────────────────────────────────────────────
+    HealthResponse:
+      type: object
+      required: [status, service]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        service:
+          type: string
+          example: llmask
+        tier:
+          type: string
+          example: community
+        edition:
+          type: string
+          example: community
+        mode:
+          type: string
+          example: proxy
+        primaryProvider:
+          type: string
+          example: openai
+        fallbackProvider:
+          type: string
+          example: none
+        authEnabled:
+          type: boolean
+        uptime:
+          type: integer
+          description: Server uptime in seconds
+        memoryMb:
+          type: integer
+          description: RSS memory usage in megabytes
+
+    # ── Proxy: Chat Completions ───────────────────────────────────────────────
+    ChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [system, user, assistant, tool, function, developer]
+        content:
+          type: string
+          nullable: true
+        name:
+          type: string
+        tool_calls:
+          type: array
+          items:
+            type: object
+        tool_call_id:
+          type: string
+
+    ChatCompletionsRequest:
+      type: object
+      required: [model, messages]
+      properties:
+        model:
+          type: string
+          example: gpt-4o
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+          example: 0.7
+        max_tokens:
+          type: integer
+          example: 1024
+        top_p:
+          type: number
+          example: 1
+        stream:
+          type: boolean
+          default: false
+        stop:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        tools:
+          type: array
+          items:
+            type: object
+        tool_choice:
+          type: object
+
+    ChatCompletionsResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: chatcmpl-abc123
+        object:
+          type: string
+          enum: [chat.completion]
+        created:
+          type: integer
+          description: Unix timestamp
+        model:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                $ref: "#/components/schemas/ChatMessage"
+              finish_reason:
+                type: string
+                nullable: true
+        usage:
+          type: object
+          properties:
+            prompt_tokens:
+              type: integer
+            completion_tokens:
+              type: integer
+            total_tokens:
+              type: integer
+
+    # ── Proxy: Anthropic Messages ─────────────────────────────────────────────
+    AnthropicMessagesRequest:
+      type: object
+      required: [model, max_tokens, messages]
+      properties:
+        model:
+          type: string
+          example: claude-sonnet-4-20250514
+        max_tokens:
+          type: integer
+          example: 1024
+        messages:
+          type: array
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              role:
+                type: string
+                enum: [user, assistant]
+              content:
+                oneOf:
+                  - type: string
+                  - type: array
+                    items:
+                      type: object
+        system:
+          type: string
+        temperature:
+          type: number
+        stream:
+          type: boolean
+          default: false
+
+    # ── Proxy: Responses API ──────────────────────────────────────────────────
+    ResponsesRequest:
+      type: object
+      required: [model, input]
+      properties:
+        model:
+          type: string
+          example: gpt-4o
+        input:
+          description: Array of message objects in Responses API format
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: object
+        instructions:
+          type: string
+          description: System-level instructions
+        temperature:
+          type: number
+        max_output_tokens:
+          type: integer
+        stream:
+          type: boolean
+          default: false
+        tools:
+          type: array
+          items:
+            type: object
+
+    # ── Files ─────────────────────────────────────────────────────────────────
+    AnonymizeTextResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        fileName:
+          type: string
+          example: report.pdf
+        scopeId:
+          type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        type:
+          type: string
+          enum: [text, document]
+        transformedCount:
+          type: integer
+          description: Number of entities that were anonymised
+        originalSize:
+          type: integer
+          description: Original file size in bytes
+        anonymizedContent:
+          type: string
+          description: Anonymised plain text content
+        format:
+          type: string
+          description: Detected document format (for documents only)
+        pageCount:
+          type: integer
+          description: Number of pages (for documents only)
+        documentMetadata:
+          type: object
+          description: Extracted document metadata (for documents only)
+
+    AnonymizeImageResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        fileName:
+          type: string
+          example: photo.jpg
+        scopeId:
+          type: string
+        type:
+          type: string
+          enum: [image]
+        format:
+          type: string
+          example: jpeg
+        originalSize:
+          type: integer
+        sanitizedSize:
+          type: integer
+        strippedMetadataChunks:
+          type: integer
+          description: Number of EXIF/metadata chunks removed
+        metadataFound:
+          type: array
+          items:
+            type: string
+          description: Names of metadata types that were found and stripped
+        sanitizedBase64:
+          type: string
+          format: byte
+          description: Base64-encoded image with metadata removed
+
+    # ── Dashboard – Config ────────────────────────────────────────────────────
+    ConfigResponse:
+      type: object
+      properties:
+        primaryProvider:
+          type: string
+          example: openai
+        fallbackProvider:
+          type: string
+          nullable: true
+          example: anthropic
+
+    ModelsResponse:
+      type: object
+      properties:
+        models:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                example: gpt-4o
+              label:
+                type: string
+                example: GPT-4o
+              provider:
+                type: string
+                example: openai
+        primaryProvider:
+          type: string
+          example: openai
+
+    # ── Dashboard – Mappings ──────────────────────────────────────────────────
+    Mapping:
+      type: object
+      properties:
+        id:
+          type: integer
+        scopeId:
+          type: string
+        originalValue:
+          type: string
+          description: The real (unmasked) value
+          example: "alice@example.com"
+        pseudonym:
+          type: string
+          description: The placeholder that replaced the original value
+          example: "[EMAIL-1]"
+        kind:
+          type: string
+          description: Entity type detected
+          example: EMAIL
+        createdAt:
+          type: string
+          format: date-time
+
+    # ── Dashboard – Stats ─────────────────────────────────────────────────────
+    StatsResponse:
+      type: object
+      properties:
+        totalRequests:
+          type: integer
+        totalMaskedEntities:
+          type: integer
+        totalScopes:
+          type: integer
+        recentActivity:
+          type: array
+          items:
+            type: object
+
+    # ── Dashboard – Sessions ──────────────────────────────────────────────────
+    Session:
+      type: object
+      properties:
+        traceId:
+          type: string
+        title:
+          type: string
+          nullable: true
+        requestCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # ── Dashboard – Requests ──────────────────────────────────────────────────
+    RequestLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        traceId:
+          type: string
+        requestId:
+          type: string
+        endpoint:
+          type: string
+          example: chat-completions
+        model:
+          type: string
+          example: gpt-4o
+        originalBody:
+          type: string
+          description: JSON string of the original (unmasked) request body
+        rewrittenBody:
+          type: string
+          description: JSON string of the masked request body that was forwarded
+        responseBody:
+          type: string
+          nullable: true
+          description: Accumulated assistant response text
+        transformedCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    # ── Dashboard – Chat ──────────────────────────────────────────────────────
+    ChatPreviewRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: User message to preview masking for
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+                enum: [user, assistant]
+              content:
+                type: string
+          description: Optional conversation history for context
+        sessionId:
+          type: string
+          description: Session scope ID; generated if omitted
+
+    ChatPreviewResponse:
+      type: object
+      properties:
+        original:
+          type: string
+        masked:
+          type: string
+        entities:
+          type: array
+          items:
+            type: object
+            properties:
+              original:
+                type: string
+              pseudonym:
+                type: string
+              kind:
+                type: string
+
+    ChatRequest:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          description: User message
+        context:
+          type: string
+          description: Optional additional context (e.g. codebase content) injected before history
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+                enum: [user, assistant]
+              content:
+                type: string
+          description: Prior conversation turns
+        model:
+          type: string
+          description: Model ID to use; defaults to primary provider's default model
+          example: gpt-4o
+        sessionId:
+          type: string
+          description: Session scope ID; generated if omitted
+        excludeEntities:
+          type: array
+          items:
+            type: string
+          description: Original values that should NOT be masked in this request
+
+    # ── Dashboard – DSI ───────────────────────────────────────────────────────
+    DsiStatsResponse:
+      type: object
+      description: Counts of detected entity types across all stored mappings
+      additionalProperties:
+        type: integer
+      example:
+        EMAIL: 42
+        PERSON: 17
+        PHONE: 8
+        SECRET: 3
+
+    DsiLeaksResponse:
+      type: object
+      properties:
+        leaks:
+          type: array
+          items:
+            type: object
+            properties:
+              requestId:
+                type: integer
+              originalValue:
+                type: string
+              foundIn:
+                type: string
+                enum: [response]
+        scannedRequests:
+          type: integer
+        leakCount:
+          type: integer

@@ -1,6 +1,8 @@
 import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply } from "fastify";
 import multipart from "@fastify/multipart";
 import { randomUUID } from "node:crypto";
+import { readFileSync, existsSync } from "node:fs";
+import { resolve, join } from "node:path";
 import { buildModules } from "./app/modules";
 import { registerDashboardRoutes } from "./modules/dashboard/dashboard-routes";
 import type { AppConfig } from "./shared/config";
@@ -86,6 +88,50 @@ export function buildServer(config: AppConfig): FastifyInstance {
       }, duration);
       recordHttpRequest(method, route, status);
     });
+  }
+
+  // ── OpenAPI / Swagger UI ───────────────────────────────────────────────
+  const openapiYamlPath = resolve(join(process.cwd(), "docs", "openapi.yaml"));
+  const openapiYaml = existsSync(openapiYamlPath) ? readFileSync(openapiYamlPath, "utf-8") : null;
+
+  if (openapiYaml) {
+    server.get("/openapi.yaml", async (_request, reply) => {
+      return reply
+        .code(200)
+        .header("Content-Type", "application/yaml; charset=utf-8")
+        .header("Access-Control-Allow-Origin", "*")
+        .send(openapiYaml);
+    });
+
+    const swaggerUiHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLMask API Docs</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+  <style>body { margin: 0; } .topbar { display: none; }</style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    SwaggerUIBundle({
+      url: "/openapi.yaml",
+      dom_id: "#swagger-ui",
+      presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+      layout: "BaseLayout",
+      deepLinking: true,
+    });
+  </script>
+</body>
+</html>`;
+
+    server.get("/docs", async (_request, reply) => {
+      return reply.code(200).header("Content-Type", "text/html; charset=utf-8").send(swaggerUiHtml);
+    });
+
+    server.log.info("API docs available at /docs (Swagger UI) and /openapi.yaml");
   }
 
   // ── Health ─────────────────────────────────────────────────────────
