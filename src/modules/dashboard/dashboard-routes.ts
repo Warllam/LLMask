@@ -9,6 +9,7 @@ import type { RewriteEngineV4 as RewriteEngine } from "../rewrite/rewrite-engine
 import type { ResponseRemapEngine } from "../remap/response-remap-engine";
 import type { DetectionEngine } from "../detection/detection-engine";
 import type { ProviderRouter } from "../provider-adapter/provider-router";
+import type { RateLimitTracker } from "../../shared/security-middleware";
 import { buildCliPrompt, spawnClaudeCli } from "../claude-cli/claude-cli-adapter";
 import { liveBus, type LiveMaskingEvent } from "./live-events";
 import type { UserStore, UserRole } from "../users/user-store";
@@ -25,6 +26,7 @@ type ChatDeps = {
   adminKey?: string;
   userStore?: UserStore;
   userAuth?: UserAuthService;
+  rateLimitTracker?: RateLimitTracker;
 };
 
 // ---------------------------------------------------------------------------
@@ -52,7 +54,7 @@ export function registerDashboardRoutes(
   server: FastifyInstance,
   deps: ChatDeps
 ) {
-  const { mappingStore, rewriteEngine, detectionEngine, providerRouter, requestTimeoutMs, shieldTerms, adminKey, userStore, userAuth } = deps;
+  const { mappingStore, rewriteEngine, detectionEngine, providerRouter, requestTimeoutMs, shieldTerms, adminKey, userStore, userAuth, rateLimitTracker } = deps;
 
   // ── JWT-based dashboard auth (when userAuth is configured) ──────────
   if (userAuth) {
@@ -334,7 +336,16 @@ export function registerDashboardRoutes(
   );
 
   server.get("/dashboard/api/stats", async () => {
-    return mappingStore.getStats();
+    const base = mappingStore.getStats();
+    const rateLimitStats = rateLimitTracker
+      ? {
+          rateLimiting: {
+            totalExceededRequests: rateLimitTracker.totalHits(),
+            topExceedingKeys: rateLimitTracker.getStats().slice(0, 10),
+          },
+        }
+      : {};
+    return { ...base, ...rateLimitStats };
   });
 
   // ---- Live SSE feed (community-accessible) ----
