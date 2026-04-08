@@ -11,6 +11,9 @@ export interface SecurityConfig {
   rateLimitDashboardMax: number;
   rateLimitMetricsMax: number;
   rateLimitHealthMax: number;
+  // LLMask-namespaced rate limit for /v1/* proxy routes (via @fastify/rate-limit)
+  llmaskRateLimitMax: number;
+  llmaskRateLimitWindowMs: number;
 
   // CORS
   corsOrigins: string[];
@@ -38,6 +41,11 @@ export function parseSecurityConfig(env: NodeJS.ProcessEnv): SecurityConfig {
   const rateLimitDashboardMax = parseInt(env.RATE_LIMIT_DASHBOARD_MAX || "120", 10);
   const rateLimitMetricsMax = parseInt(env.RATE_LIMIT_METRICS_MAX || "10", 10);
   const rateLimitHealthMax = parseInt(env.RATE_LIMIT_HEALTH_MAX || "60", 10);
+
+  // LLMask-namespaced proxy rate limit (LLMASK_RATE_LIMIT reqs per LLMASK_RATE_WINDOW minutes)
+  const llmaskRateLimitMax = parseInt(env.LLMASK_RATE_LIMIT || "100", 10);
+  const llmaskRateLimitWindowMinutes = parseFloat(env.LLMASK_RATE_WINDOW || "1");
+  const llmaskRateLimitWindowMs = Math.round(llmaskRateLimitWindowMinutes * 60 * 1000);
 
   // CORS — CORS_ORIGIN is the canonical env var; CORS_ORIGINS is accepted as alias
   const corsRaw = env.CORS_ORIGIN || env.CORS_ORIGINS;
@@ -74,6 +82,8 @@ export function parseSecurityConfig(env: NodeJS.ProcessEnv): SecurityConfig {
     rateLimitDashboardMax,
     rateLimitMetricsMax,
     rateLimitHealthMax,
+    llmaskRateLimitMax,
+    llmaskRateLimitWindowMs,
     corsOrigins,
     corsMethods,
     corsHeaders,
@@ -355,7 +365,7 @@ export function sanitizeForwardedHeaders(request: FastifyRequest): void {
 
 // ── Rate Limit Key Extraction ─────────────────────────────────────
 
-function extractRateLimitKey(request: FastifyRequest): string | undefined {
+export function extractRateLimitKey(request: FastifyRequest): string | undefined {
   const llmaskKey = request.headers["x-llmask-key"];
   if (llmaskKey) return Array.isArray(llmaskKey) ? llmaskKey[0] : llmaskKey;
 
@@ -368,6 +378,50 @@ function extractRateLimitKey(request: FastifyRequest): string | undefined {
   }
 
   return undefined;
+}
+
+// ── Rate Limit Event Tracker (for dashboard stats) ───────────────────
+
+interface RateLimitHit {
+  count: number;
+  lastHitAt: number;
+  paths: Set<string>;
+}
+
+export class RateLimitTracker {
+  private readonly hits = new Map<string, RateLimitHit>();
+
+  record(key: string, path: string): void {
+    let entry = this.hits.get(key);
+    if (!entry) {
+      entry = { count: 0, lastHitAt: 0, paths: new Set() };
+      this.hits.set(key, entry);
+    }
+    entry.count++;
+    entry.lastHitAt = Date.now();
+    entry.paths.add(path);
+  }
+
+  getStats(): Array<{ key: string; count: number; lastHitAt: number; paths: string[] }> {
+    return Array.from(this.hits.entries())
+      .map(([key, data]) => ({
+        key,
+        count: data.count,
+        lastHitAt: data.lastHitAt,
+        paths: Array.from(data.paths),
+      }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  totalHits(): number {
+    let total = 0;
+    for (const entry of this.hits.values()) total += entry.count;
+    return total;
+  }
+
+  reset(): void {
+    this.hits.clear();
+  }
 }
 
 // ── Register Security Middleware ──────────────────────────────────────
@@ -453,6 +507,8 @@ export function registerSecurityMiddleware(
   });
 
   // ── 4. Advanced Rate Limiting (per-route) ────────────────────────────
+  // Note: /v1/* proxy routes are rate-limited separately via @fastify/rate-limit
+  // (see server.ts). Only system/dashboard routes are handled here.
   const rateLimiter = new AdvancedRateLimiter([
     {
       path: "/metrics",
@@ -462,26 +518,6 @@ export function registerSecurityMiddleware(
     {
       path: "/health",
       limit: config.rateLimitHealthMax,
-      windowMs: config.rateLimitWindowMs,
-    },
-    {
-      path: "/v1/chat/completions",
-      limit: config.rateLimitApiMax,
-      windowMs: config.rateLimitWindowMs,
-    },
-    {
-      path: "/v1/messages",
-      limit: config.rateLimitApiMax,
-      windowMs: config.rateLimitWindowMs,
-    },
-    {
-      path: "/v1/responses",
-      limit: config.rateLimitApiMax,
-      windowMs: config.rateLimitWindowMs,
-    },
-    {
-      path: "/v1/files",
-      limit: config.rateLimitApiMax,
       windowMs: config.rateLimitWindowMs,
     },
     {
