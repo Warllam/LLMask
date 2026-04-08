@@ -230,3 +230,12 @@ export const api = {
     return res.json() as Promise<TestRuleResult>;
   },
 };
+
+export type UserInfo = {
+  id: string;
+  username: string;
+  role: "admin" | "viewer";
+  apiKey: string;
+  createdAt: string;
+  lastLogin: string | null;
+};
