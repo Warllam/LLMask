@@ -205,7 +205,7 @@ export interface ActivityEntry {
   status: "success" | "error";
 }
 
-export type View = "welcome" | "conversation" | "chat" | "activity" | "config" | "health" | "gdpr" | "settings" | "requestlog";
+export type View = "welcome" | "conversation" | "chat" | "activity" | "config" | "health" | "gdpr" | "settings" | "requestlog" | "custom-rules";
 
 export type MaskingStrategy = "pseudonymization" | "redaction" | "generalization" | "tokenization";
 
@@ -263,4 +263,23 @@ export interface EraseResult {
   deletedMappings: number;
   deletedRequests: number;
   deletedSessions: number;
+}
+
+// ── Custom Rules Types ────────────────────────────────────────────────────────
+
+export interface CustomRule {
+  id: number;
+  name: string;
+  pattern: string;
+  replacementPrefix: string;
+  category: string;
+  enabled: boolean;
+  createdAt: string;
+}
+
+export interface TestRuleResult {
+  valid: boolean;
+  matches: string[];
+  preview: string;
+  error?: string;
 }

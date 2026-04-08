@@ -18,6 +18,7 @@ import {
   Lock,
   ClipboardList,
   SlidersHorizontal,
+  Filter,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -122,6 +123,7 @@ export function Sidebar({
             { view: "requestlog", icon: ClipboardList, label: "Requêtes" },
             { view: "activity", icon: Activity, label: "Activité" },
             { view: "chat", icon: MessageSquare, label: "Chat" },
+            { view: "custom-rules", icon: Filter, label: "Custom Rules" },
           ] as const
         ).map(({ view, icon: Icon, label }) => (
           <Button
@@ -347,6 +349,7 @@ export function Sidebar({
         <NavItem icon={ClipboardList} view="requestlog" label="Journal des requêtes" sublabel="Request log" currentView={currentView} onNavigate={onNavigate} />
         <NavItem icon={Activity} view="activity" label="Activité en direct" sublabel="Live activity" currentView={currentView} onNavigate={onNavigate} />
         <NavItem icon={MessageSquare} view="chat" label="Assistant IA" sublabel="AI chat" currentView={currentView} onNavigate={onNavigate} />
+        <NavItem icon={Filter} view="custom-rules" label="Règles personnalisées" sublabel="Custom rules" currentView={currentView} onNavigate={onNavigate} />
         <div className="h-px bg-border/50 my-1" />
         <NavItem icon={HeartPulse} view="health" label="État du système" sublabel="System health" currentView={currentView} onNavigate={onNavigate} />
         <NavItem icon={Lock} view="gdpr" label="Conformité RGPD" sublabel="GDPR compliance" currentView={currentView} onNavigate={onNavigate} />
