@@ -1,197 +1,172 @@
 # LLMask
 
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Node.js >=20.19.0](https://img.shields.io/badge/node-%3E%3D20.19.0-brightgreen)](https://nodejs.org)
+[![npm version](https://img.shields.io/npm/v/llmask)](https://www.npmjs.com/package/llmask)
+[![CI](https://github.com/Warllam/LLMask/actions/workflows/ci.yml/badge.svg)](https://github.com/Warllam/LLMask/actions/workflows/ci.yml)
+[![GitHub Stars](https://img.shields.io/github/stars/Warllam/LLMask?style=social)](https://github.com/Warllam/LLMask/stargazers)
 
-**Mask sensitive data before it reaches any LLM**
+**Privacy-preserving proxy that masks sensitive data before it reaches any LLM — and unmasks it in the response.**
 
-LLMask is an OpenAI-compatible proxy that automatically detects and masks sensitive information (PII, credentials, business data) in your prompts before they reach language models. The masked data is stored locally and automatically remapped in responses.
+```
+Your App  ──────►  LLMask Proxy  ──────►  LLM Provider
+                  ┌────────────┐          (OpenAI, Claude,
+                  │  Sensitive │           Gemini, Mistral)
+                  │ data stays │
+                  │   local ✓  │◄──────  Tokens remapped
+                  └────────────┘         transparently
+```
+
+---
+
+## Quickstart
+
+```bash
+npm install -g llmask
+llmask init                        # generates .env from guided prompts
+llmask start                       # starts proxy on http://localhost:8787
+# Point your LLM tools to http://localhost:8787
+```
+
+Or with Docker:
+
+```bash
+docker-compose up -d               # dashboard at http://localhost:8787/dashboard
+```
+
+---
 
 ## Features
 
-- ✅ **OpenAI-compatible API** — Drop-in replacement for OpenAI, Anthropic, and other providers
-- 🔒 **Automatic PII detection** — Emails, phone numbers, credit cards, SSNs, API keys, and more
-- 🎭 **Reversible masking** — Original data never leaves your infrastructure
-- 🔄 **Multi-provider support** — OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini, Mistral
-- 🔐 **4 authentication modes** — API keys + OAuth (Claude CLI, Codex CLI)
-- 📊 **Live dashboard** — Monitor masked data, mappings, and stats in real-time
-- 🚀 **Zero configuration** — Works out of the box with sensible defaults
+| Feature | Description |
+|---------|-------------|
+| **Reversible masking** | Sensitive tokens (`[EMAIL_1]`, `[PHONE_1]`) are stored locally and swapped back transparently in every LLM response — your app sees real data, the LLM never does |
+| **Multi-provider** | OpenAI, Anthropic Claude, Azure OpenAI, Google Gemini, Mistral — one proxy for all |
+| **AST-aware code masking** | Parses code blocks with a real AST; masks only values and secrets, preserves identifiers so the LLM stays helpful |
+| **GDPR/RGPD compliance** | Audit log, retention policies, data-subject export/deletion via the admin API |
+| **4 auth modes** | API key or OAuth for both OpenAI (Codex CLI) and Anthropic (Claude CLI) |
+| **Admin dashboard** | Live view of mappings, masking stats, config editor, and a built-in chat tester |
+| **Docker production setup** | Single `docker-compose up -d` with health checks, volume mounts, and Prometheus metrics |
 
-## Quick Start
+---
 
-### NPM
+## How It Works
 
-```bash
-# Clone and install
-git clone https://github.com/Warllam/LLMask.git
-cd llmask
-npm install
-
-# Configure (copy and edit .env)
-cp .env.example .env
-
-# Start the server
-npm start
-```
-
-LLMask will start on `http://localhost:8787`
-
-### Docker
-
-```bash
-docker-compose up -d
-```
-
-Dashboard: `http://localhost:8787/dashboard`  
-API: `http://localhost:8787/v1/chat/completions`
-
-## Authentication Modes
-
-LLMask supports **4 authentication modes**, configurable via `.env`:
-
-### 1. OpenAI API Key (default)
-
-```bash
-PRIMARY_PROVIDER=openai
-OPENAI_AUTH_MODE=api_key
-OPENAI_API_KEY=sk-...
-OPENAI_BASE_URL=https://api.openai.com
-```
-
-### 2. OpenAI Codex OAuth (ChatGPT CLI)
-
-```bash
-PRIMARY_PROVIDER=openai
-OPENAI_AUTH_MODE=oauth_codex
-OPENAI_OAUTH_TOKEN_PATH=/path/to/codex/auth.json
-OPENAI_BASE_URL=https://chatgpt.com/backend-api
-```
-
-Requires a valid OAuth token from Codex CLI (`~/.codex/auth.json`)
-
-### 3. Anthropic API Key
-
-```bash
-PRIMARY_PROVIDER=anthropic
-ANTHROPIC_AUTH_MODE=api_key
-ANTHROPIC_API_KEY=sk-ant-...
-ANTHROPIC_BASE_URL=https://api.anthropic.com
-```
-
-### 4. Anthropic Claude CLI OAuth
-
-```bash
-PRIMARY_PROVIDER=anthropic
-ANTHROPIC_AUTH_MODE=oauth_claude_code
-ANTHROPIC_OAUTH_TOKEN_PATH=/path/to/.claude/.credentials.json
-```
-
-Requires Claude CLI authentication:
-```bash
-npx @anthropic-ai/claude-code login
-```
-
-Tokens are read from `~/.claude/.credentials.json` by default.
-
-## Configuration
-
-All configuration is done via environment variables (`.env` file):
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | `8787` |
-| `PRIMARY_PROVIDER` | LLM provider (`openai`, `anthropic`, `gemini`, `mistral`) | `openai` |
-| `LLMASK_MODE` | `trust` (auto-mask) or `review` (manual approval) | `trust` |
-| `DATA_DIR` | Local data storage directory | `./data` |
-| `LOG_LEVEL` | Log verbosity (`info`, `debug`, `trace`) | `info` |
-
-See `.env.example` for the complete list.
-
-## API Endpoints
-
-### Proxy (OpenAI-compatible)
-
-- `POST /v1/chat/completions` — Chat completions (OpenAI format)
-- `POST /v1/messages` — Messages (Anthropic format)
-- `POST /v1/responses` — Responses (OpenAI Responses API)
-
-### Dashboard & Admin
-
-- `GET /dashboard` — Live web dashboard
-- `GET /health` — Health check
-- `GET /metrics` — Prometheus metrics
-
-## Usage Example
-
-Once LLMask is running, point your LLM client to `http://localhost:8787`:
+1. Your request arrives at `POST /v1/chat/completions` (OpenAI format) or `POST /v1/messages` (Anthropic format).
+2. LLMask scans the prompt with regex + NER + AST analysis — detecting emails, phones, credit cards, SSNs, API keys, names, and code secrets.
+3. Sensitive spans are replaced with deterministic tokens (`[EMAIL_1]`, `[APIKEY_3]`, …) and stored in an encrypted local mapping store.
+4. The sanitised prompt is forwarded to your configured LLM provider.
+5. The response is scanned for tokens and original values are restored before returning to your app.
 
 ```python
 import openai
 
-client = openai.OpenAI(
-    base_url="http://localhost:8787/v1",
-    api_key="your-api-key"  # Or leave empty if using OAuth
-)
+client = openai.OpenAI(base_url="http://localhost:8787/v1", api_key="any")
 
 response = client.chat.completions.create(
-    model="gpt-4",
-    messages=[
-        {"role": "user", "content": "My email is john@example.com and my phone is +1-555-1234"}
-    ]
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Draft a reply to alice@corp.com about invoice #INV-9923"}]
 )
-
-print(response.choices[0].message.content)
+# The LLM received: "Draft a reply to [EMAIL_1] about invoice #[ID_1]"
+# You receive:  full response with alice@corp.com and INV-9923 restored
 ```
 
-**What happens:**
-1. LLMask detects `john@example.com` and `+1-555-1234`
-2. Replaces them with tokens like `[EMAIL_1]` and `[PHONE_1]`
-3. Sends masked prompt to the LLM
-4. Remaps tokens back to real values in the response
-5. Returns the complete response to your app
+---
 
-## Dashboard
+## Comparison
 
-Open `http://localhost:8787/dashboard` to:
+| | **LLMask** | Tonic.ai | Protecto | Granica |
+|---|---|---|---|---|
+| **Open source** | ✅ Apache 2.0 | ❌ SaaS | ❌ SaaS | ❌ SaaS |
+| **Price** | Free / self-hosted | Paid | Paid | Paid |
+| **Reversible masking** | ✅ | ✅ | ✅ | ❌ |
+| **Code-aware (AST)** | ✅ | ❌ | ❌ | ❌ |
+| **Self-hosted** | ✅ | ❌ | Optional | ❌ |
+| **LLM proxy (drop-in)** | ✅ | ❌ | ❌ | ❌ |
 
-- 💬 **Chat** — Test masking with a live chat interface
-- 📋 **Mappings** — View all detected/masked entities
-- ⚙️ **Config** — Adjust detection rules and policies
-- 📊 **Stats** — Request counts, masking stats, response times
+---
 
-<!-- TODO: add dashboard screenshot -->
+## Configuration
 
-## Docker Deployment
+All configuration lives in `.env` (generated by `llmask init`):
 
-```bash
-# Build and run
-docker-compose up -d
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | Proxy port | `8787` |
+| `PRIMARY_PROVIDER` | `openai` \| `anthropic` \| `gemini` \| `mistral` | `openai` |
+| `LLMASK_MODE` | `trust` (auto-mask) or `review` (manual approval) | `trust` |
+| `DATA_DIR` | Local storage for mappings | `./data` |
+| `LOG_LEVEL` | `info` \| `debug` \| `trace` | `info` |
 
-# View logs
-docker-compose logs -f llmask
+See [`.env.example`](.env.example) for the full reference.
 
-# Stop
-docker-compose down
+### Authentication modes
+
+<details>
+<summary>OpenAI API key</summary>
+
+```env
+PRIMARY_PROVIDER=openai
+OPENAI_AUTH_MODE=api_key
+OPENAI_API_KEY=sk-...
 ```
+</details>
+
+<details>
+<summary>OpenAI Codex OAuth (ChatGPT CLI)</summary>
+
+```env
+PRIMARY_PROVIDER=openai
+OPENAI_AUTH_MODE=oauth_codex
+OPENAI_OAUTH_TOKEN_PATH=~/.codex/auth.json
+```
+</details>
+
+<details>
+<summary>Anthropic API key</summary>
+
+```env
+PRIMARY_PROVIDER=anthropic
+ANTHROPIC_AUTH_MODE=api_key
+ANTHROPIC_API_KEY=sk-ant-...
+```
+</details>
+
+<details>
+<summary>Anthropic Claude CLI OAuth</summary>
+
+```env
+PRIMARY_PROVIDER=anthropic
+ANTHROPIC_AUTH_MODE=oauth_claude_code
+# Token auto-read from ~/.claude/.credentials.json after: npx @anthropic-ai/claude-code login
+```
+</details>
+
+---
+
+## API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /v1/chat/completions` | OpenAI chat completions (proxied + masked) |
+| `POST /v1/messages` | Anthropic messages (proxied + masked) |
+| `POST /v1/responses` | OpenAI Responses API |
+| `GET /dashboard` | Admin dashboard (UI) |
+| `GET /health` | Health check |
+| `GET /metrics` | Prometheus metrics |
+
+---
 
 ## Development
 
 ```bash
-# Install dependencies
 npm install
-cd dashboard && npm install
+cd dashboard && npm install && cd ..
 
-# Run in dev mode (hot reload)
-npm run dev
-
-# Run tests
-npm test
-
-# Type check
-npm run typecheck
-
-# Build
-npm run build
+npm run dev        # hot reload
+npm test           # vitest
+npm run typecheck  # tsc
+npm run build      # production build → dist/
 ```
 
 ## License
@@ -202,9 +177,9 @@ See [LICENSE](./LICENSE) for details.
 
 ## Support
 
-- 📖 **Documentation**: [docs/](./docs/)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/Warllam/LLMask/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/Warllam/LLMask/discussions)
+- **Documentation**: [docs/](./docs/)
+- **Issues**: [GitHub Issues](https://github.com/Warllam/LLMask/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Warllam/LLMask/discussions)
 
 ## Contributing
 
@@ -212,6 +187,23 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get
 
 Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
+
 ---
 
-**Note**: LLMask is a privacy-focused tool. All sensitive data is processed locally and never sent to third parties. Always review your organization's data policies before deploying.
+## Documentation
+
+- [Claude Code integration guide](docs/claude-code.md)
+- [Production deploy guide](docs/deploy.md)
+- [API reference](docs/api.md)
+- [Contributing](CONTRIBUTING.md)
+- [Benchmark framework](benchmarks/README.md)
+
+---
+
+## License
+
+[Apache License 2.0](LICENSE) — free to use, modify, and self-host.
+
+---
+
+> **Privacy note:** LLMask processes all data locally. Nothing is sent to third parties. All mappings are stored on your infrastructure and never leave it.
