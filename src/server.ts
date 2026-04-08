@@ -2,7 +2,9 @@ import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply }
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
 import { randomBytes, randomUUID } from "node:crypto";
+import fs from "node:fs";
 import { readFileSync, existsSync } from "node:fs";
+import path from "node:path";
 import { resolve, join } from "node:path";
 import { buildModules } from "./app/modules";
 import { registerDashboardRoutes } from "./modules/dashboard/dashboard-routes";
@@ -31,7 +33,19 @@ import {
   recordHttpRequest,
 } from "./shared/metrics";
 
+const PKG_VERSION = (() => {
+  try {
+    return (JSON.parse(
+      fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf-8")
+    ) as { version: string }).version;
+  } catch {
+    return "unknown";
+  }
+})();
+
 export async function buildServer(config: AppConfig): Promise<FastifyInstance> {
+  let lastProxyRequestAt: string | null = null;
+
   const securityConf = parseSecurityConfig(process.env);
   const server = Fastify({
     logger: {
@@ -211,19 +225,125 @@ export async function buildServer(config: AppConfig): Promise<FastifyInstance> {
     server.log.info("API docs available at /docs (Swagger UI) and /openapi.yaml");
   }
 
+  // ── Track last proxied request ─────────────────────────────────────
+  server.addHook("onRequest", async (request) => {
+    if (request.url.startsWith("/v1/")) {
+      lastProxyRequestAt = new Date().toISOString();
+    }
+  });
+
   // ── Health ─────────────────────────────────────────────────────────
-  server.get("/health", async () => ({
-    status: "ok",
-    service: "llmask",
-    tier: "community",
-    edition: "community",
-    mode: config.llmaskMode,
-    primaryProvider: config.primaryProvider,
-    fallbackProvider: config.fallbackProvider ?? "none",
-    authEnabled: config.authEnabled,
-    uptime: Math.round(process.uptime()),
-    memoryMb: Math.round(process.memoryUsage().rss / 1024 / 1024)
-  }));
+  server.get("/health", async (_request, reply) => {
+    const mem = process.memoryUsage();
+    const toMb = (b: number) => Math.round(b / 1024 / 1024 * 10) / 10;
+
+    // Database stats (single query to getStats covers mapping count + request totals)
+    let dbStatus: "ok" | "error" = "ok";
+    let dbSizeBytes = 0;
+    let totalMappings = 0;
+    let totalRequests = 0;
+    let totalTransforms = 0;
+    try {
+      const stats = modules.mappingStore.getStats();
+      totalMappings = stats.totalMappings;
+      totalRequests = stats.totalRequests;
+      totalTransforms = stats.totalTransforms;
+      try {
+        dbSizeBytes = fs.statSync(config.sqlitePath).size;
+      } catch {
+        // file may not exist yet on first startup before any requests
+      }
+    } catch {
+      dbStatus = "error";
+    }
+
+    // Provider statuses — check if API key / OAuth token path is configured
+    const providers: Record<string, { configured: boolean }> = {
+      openai: { configured: !!(config.openaiApiKey || config.openaiAuthMode === "oauth_codex") },
+      anthropic: { configured: !!(config.anthropicApiKey || config.anthropicAuthMode === "oauth_claude_code") },
+    };
+    if (config.litellmBaseUrl) {
+      providers.litellm = { configured: true };
+    }
+    if (config.azureOpenaiApiKey && config.azureOpenaiBaseUrl) {
+      providers["azure-openai"] = { configured: true };
+    }
+    if (config.geminiApiKey) {
+      providers.gemini = { configured: true };
+    }
+    if (config.mistralApiKey) {
+      providers.mistral = { configured: true };
+    }
+
+    const anyProviderConfigured = Object.values(providers).some((p) => p.configured);
+    let status: "healthy" | "degraded" | "unhealthy";
+    if (dbStatus === "ok" && anyProviderConfigured) {
+      status = "healthy";
+    } else if (dbStatus === "ok" || anyProviderConfigured) {
+      status = "degraded";
+    } else {
+      status = "unhealthy";
+    }
+
+    return reply.code(status === "unhealthy" ? 503 : 200).send({
+      status,
+      uptime: Math.round(process.uptime()),
+      version: PKG_VERSION,
+      database: {
+        status: dbStatus,
+        size_bytes: dbSizeBytes,
+        mapping_count: totalMappings,
+      },
+      memory: {
+        rss: toMb(mem.rss),
+        heapUsed: toMb(mem.heapUsed),
+        heapTotal: toMb(mem.heapTotal),
+      },
+      providers,
+      last_request: lastProxyRequestAt,
+      masking_stats: {
+        total_requests: totalRequests,
+        total_elements_masked: totalTransforms,
+        active_strategy: config.llmaskMode,
+      },
+    });
+  });
+
+  // ── Health: liveness probe (Kubernetes) ───────────────────────────
+  server.get("/health/live", async (_request, reply) => {
+    return reply.code(200).send({ status: "ok" });
+  });
+
+  // ── Health: readiness probe ────────────────────────────────────────
+  server.get("/health/ready", async (_request, reply) => {
+    // Check DB is accessible
+    let dbOk = false;
+    try {
+      modules.mappingStore.getStats();
+      dbOk = true;
+    } catch {
+      dbOk = false;
+    }
+
+    // Check at least one provider is configured
+    const anyProvider = !!(
+      config.openaiApiKey ||
+      config.openaiAuthMode === "oauth_codex" ||
+      config.anthropicApiKey ||
+      config.anthropicAuthMode === "oauth_claude_code" ||
+      config.litellmBaseUrl ||
+      (config.azureOpenaiApiKey && config.azureOpenaiBaseUrl) ||
+      config.geminiApiKey ||
+      config.mistralApiKey
+    );
+
+    if (dbOk && anyProvider) {
+      return reply.code(200).send({ status: "ready" });
+    }
+
+    const reason = !dbOk ? "database unavailable" : "no provider configured";
+    return reply.code(503).send({ status: "not ready", reason });
+  });
 
   // ── Metrics (Prometheus) ───────────────────────────────────────────
   if (config.metricsEnabled) {
