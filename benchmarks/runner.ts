@@ -48,7 +48,8 @@ const anthropicAuth = getAnthropicAuth();
 const BENCHMARK_MODEL = process.env.BENCHMARK_MODEL || "claude-3-haiku-20240307";
 const BENCHMARK_CONCURRENCY = parseInt(process.env.BENCHMARK_CONCURRENCY || "2", 10);
 
-const __benchdir = new URL(".", import.meta.url).pathname;
+import { fileURLToPath } from "url";
+const __benchdir = fileURLToPath(new URL(".", import.meta.url));
 const PROMPTS_DIR = join(__benchdir, "prompts");
 const RESULTS_DIR = join(__benchdir, "results");
 
@@ -89,8 +90,10 @@ Environment:
 
 // ─── Prompt Loading ─────────────────────────────────────────────────────────
 
-function loadPrompt(path: string): PromptSpec {
-  const resolved = path.startsWith("/") ? path : join(process.cwd(), path);
+function loadPrompt(promptPath: string): PromptSpec {
+  // Handle absolute paths on both Unix (/...) and Windows (C:\... or C:/...)
+  const isAbsolute = promptPath.startsWith("/") || /^[A-Za-z]:[\\/]/.test(promptPath);
+  const resolved = isAbsolute ? promptPath : join(process.cwd(), promptPath);
   return JSON.parse(readFileSync(resolved, "utf-8"));
 }
 
