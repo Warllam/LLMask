@@ -10,6 +10,7 @@ import type { ResponseRemapEngine } from "../remap/response-remap-engine";
 import type { DetectionEngine } from "../detection/detection-engine";
 import type { ProviderRouter } from "../provider-adapter/provider-router";
 import type { RateLimitTracker } from "../../shared/security-middleware";
+import type { CustomRulesStore } from "../custom-rules/custom-rules-store";
 import { buildCliPrompt, spawnClaudeCli } from "../claude-cli/claude-cli-adapter";
 import { liveBus, type LiveMaskingEvent } from "./live-events";
 import type { UserStore, UserRole } from "../users/user-store";
@@ -21,6 +22,7 @@ type ChatDeps = {
   remapEngine: ResponseRemapEngine;
   detectionEngine: DetectionEngine;
   providerRouter: ProviderRouter;
+  customRulesStore: CustomRulesStore;
   requestTimeoutMs: number;
   shieldTerms?: string[];
   adminKey?: string;
@@ -54,7 +56,7 @@ export function registerDashboardRoutes(
   server: FastifyInstance,
   deps: ChatDeps
 ) {
-  const { mappingStore, rewriteEngine, detectionEngine, providerRouter, requestTimeoutMs, shieldTerms, adminKey, userStore, userAuth, rateLimitTracker } = deps;
+  const { mappingStore, rewriteEngine, detectionEngine, providerRouter, customRulesStore, requestTimeoutMs, shieldTerms, adminKey, userStore, userAuth, rateLimitTracker } = deps;
 
   // ── JWT-based dashboard auth (when userAuth is configured) ──────────
   if (userAuth) {
@@ -419,6 +421,111 @@ export function registerDashboardRoutes(
     "/dashboard/api/sessions/:traceId",
     async (request) => {
       mappingStore.deleteSession(request.params.traceId);
+      return { ok: true };
+    }
+  );
+
+  // ---- Custom Rules API ----
+
+  server.get("/dashboard/api/rules", async () => {
+    return customRulesStore.list();
+  });
+
+  server.post<{ Body: { name: string; pattern: string; replacementPrefix: string; category: string } }>(
+    "/dashboard/api/rules",
+    async (request, reply) => {
+      const { name, pattern, replacementPrefix, category } = request.body as {
+        name: string;
+        pattern: string;
+        replacementPrefix: string;
+        category: string;
+      };
+
+      if (!name || typeof name !== "string" || !name.trim()) {
+        return reply.code(400).send({ error: "name is required" });
+      }
+      if (!pattern || typeof pattern !== "string" || !pattern.trim()) {
+        return reply.code(400).send({ error: "pattern is required" });
+      }
+
+      // Validate regex
+      try {
+        new RegExp(pattern);
+      } catch (err) {
+        return reply.code(400).send({ error: `Invalid regex: ${(err as Error).message}` });
+      }
+
+      const rule = customRulesStore.create({
+        name: name.trim(),
+        pattern: pattern.trim(),
+        replacementPrefix: (replacementPrefix || "CUSTOM").trim(),
+        category: (category || "Custom").trim(),
+      });
+      return reply.code(201).send(rule);
+    }
+  );
+
+  server.post<{ Body: { pattern: string; text: string } }>(
+    "/dashboard/api/rules/test",
+    async (request, reply) => {
+      const { pattern, text } = request.body as { pattern: string; text: string };
+      if (!pattern || typeof pattern !== "string") {
+        return reply.code(400).send({ error: "pattern is required" });
+      }
+      if (typeof text !== "string") {
+        return reply.code(400).send({ error: "text is required" });
+      }
+      return customRulesStore.testRule(pattern, text);
+    }
+  );
+
+  server.patch<{
+    Params: { id: string };
+    Body: { name?: string; pattern?: string; replacementPrefix?: string; category?: string; enabled?: boolean };
+  }>(
+    "/dashboard/api/rules/:id",
+    async (request, reply) => {
+      const id = parseInt(request.params.id, 10);
+      if (Number.isNaN(id)) {
+        return reply.code(400).send({ error: "Invalid rule id" });
+      }
+
+      const body = request.body as {
+        name?: string;
+        pattern?: string;
+        replacementPrefix?: string;
+        category?: string;
+        enabled?: boolean;
+      };
+
+      // Validate regex if pattern is being updated
+      if (body.pattern !== undefined) {
+        try {
+          new RegExp(body.pattern);
+        } catch (err) {
+          return reply.code(400).send({ error: `Invalid regex: ${(err as Error).message}` });
+        }
+      }
+
+      const updated = customRulesStore.update(id, body);
+      if (!updated) {
+        return reply.code(404).send({ error: "Rule not found" });
+      }
+      return updated;
+    }
+  );
+
+  server.delete<{ Params: { id: string } }>(
+    "/dashboard/api/rules/:id",
+    async (request, reply) => {
+      const id = parseInt(request.params.id, 10);
+      if (Number.isNaN(id)) {
+        return reply.code(400).send({ error: "Invalid rule id" });
+      }
+      const deleted = customRulesStore.delete(id);
+      if (!deleted) {
+        return reply.code(404).send({ error: "Rule not found" });
+      }
       return { ok: true };
     }
   );

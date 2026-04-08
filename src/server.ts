@@ -2,10 +2,8 @@ import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply }
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
 import { randomBytes, randomUUID } from "node:crypto";
-import fs from "node:fs";
-import { readFileSync, existsSync } from "node:fs";
-import path from "node:path";
-import { resolve, join } from "node:path";
+import fs, { readFileSync, existsSync } from "node:fs";
+import path, { resolve, join } from "node:path";
 import { buildModules } from "./app/modules";
 import { registerDashboardRoutes } from "./modules/dashboard/dashboard-routes";
 import { registerGdprRoutes } from "./modules/dashboard/gdpr-routes";
@@ -599,6 +597,7 @@ export async function buildServer(config: AppConfig): Promise<FastifyInstance> {
     remapEngine: modules.remapEngine,
     detectionEngine: modules.detectionEngine,
     providerRouter: modules.providerRouter,
+    customRulesStore: modules.customRulesStore,
     requestTimeoutMs: config.requestTimeoutMs,
     shieldTerms: modules.shieldTerms,
     adminKey: config.adminKey,

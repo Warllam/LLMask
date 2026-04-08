@@ -16,6 +16,8 @@ import type {
   RetentionInfo,
   EraseResult,
   AppSettings,
+  CustomRule,
+  TestRuleResult,
 } from "./types";
 import { authStore } from "./auth";
 
@@ -183,13 +185,48 @@ export const api = {
       return res.json() as Promise<{ ok: true }>;
     },
   },
-};
 
-export type UserInfo = {
-  id: string;
-  username: string;
-  role: "admin" | "viewer";
-  apiKey: string;
-  createdAt: string;
-  lastLogin: string | null;
+  // ── Custom Rules ──────────────────────────────────────────────────────────
+  customRules: () => fetchJson<CustomRule[]>("/rules"),
+  createCustomRule: async (input: { name: string; pattern: string; replacementPrefix: string; category: string }) => {
+    const res = await fetch(`${BASE}/rules`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText })) as { error: string };
+      throw new Error(err.error || `API error ${res.status}`);
+    }
+    return res.json() as Promise<CustomRule>;
+  },
+  updateCustomRule: async (id: number, input: { name?: string; pattern?: string; replacementPrefix?: string; category?: string; enabled?: boolean }) => {
+    const res = await fetch(`${BASE}/rules/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText })) as { error: string };
+      throw new Error(err.error || `API error ${res.status}`);
+    }
+    return res.json() as Promise<CustomRule>;
+  },
+  deleteCustomRule: async (id: number) => {
+    const res = await fetch(`${BASE}/rules/${id}`, { method: "DELETE", headers: authHeaders() });
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return res.json() as Promise<{ ok: true }>;
+  },
+  testCustomRule: async (pattern: string, text: string) => {
+    const res = await fetch(`${BASE}/rules/test`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ pattern, text }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText })) as { error: string };
+      throw new Error(err.error || `API error ${res.status}`);
+    }
+    return res.json() as Promise<TestRuleResult>;
+  },
 };
