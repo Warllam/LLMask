@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   XCircle,
   PlayCircle,
-  ChevronDown,
   ChevronUp,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

@@ -1,4 +1,4 @@
-import { Shield, MessageSquare, Home, Keyboard, Menu, Activity, Settings, HeartPulse, Lock, ClipboardList, SlidersHorizontal, LogOut, User } from "lucide-react";
+import { Shield, MessageSquare, Home, Keyboard, Menu, Activity, Settings, HeartPulse, Lock, ClipboardList, SlidersHorizontal, LogOut, User, Filter } from "lucide-react";
 import { useState } from "react";
 import type { View } from "@/lib/types";
 import type { AuthUser } from "@/lib/auth";
@@ -22,6 +22,7 @@ const viewConfig: Record<View, { label: string; icon: typeof Home }> = {
   gdpr: { label: "Conformité RGPD / GDPR Compliance", icon: Lock },
   settings: { label: "Réglages / Settings", icon: SlidersHorizontal },
   requestlog: { label: "Journal des requêtes / Request Log", icon: ClipboardList },
+  "custom-rules": { label: "Règles personnalisées / Custom Rules", icon: Filter },
 };
 
 const shortcuts = [
