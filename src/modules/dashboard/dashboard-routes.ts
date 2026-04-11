@@ -39,6 +39,7 @@ interface RuntimeSettings {
   maskingStrategy: "pseudonymization" | "redaction" | "generalization" | "tokenization";
   retentionDays: number;
   provider: string;
+  defaultModel: string;
 }
 
 const settingsPath = path.join(process.cwd(), ".llmask-settings.json");
@@ -46,6 +47,7 @@ let runtimeSettings: RuntimeSettings = {
   maskingStrategy: "pseudonymization",
   retentionDays: 30,
   provider: "anthropic",
+  defaultModel: "",
 };
 try {
   const raw = fs.readFileSync(settingsPath, "utf-8");
@@ -231,6 +233,9 @@ export function registerDashboardRoutes(
         provider: typeof body.provider === "string" && body.provider.length > 0
           ? body.provider
           : runtimeSettings.provider,
+        defaultModel: typeof body.defaultModel === "string"
+          ? body.defaultModel
+          : runtimeSettings.defaultModel,
       };
       runtimeSettings = updated;
       try {
@@ -288,6 +293,109 @@ export function registerDashboardRoutes(
     }
     return { models, primaryProvider: providerRouter.primaryType };
   });
+
+  // GET /dashboard/api/models/:provider — models for a specific provider
+  server.get<{ Params: { provider: string } }>(
+    "/dashboard/api/models/:provider",
+    async (request, reply) => {
+      const { provider } = request.params;
+      const catalog = MODEL_CATALOG[provider];
+      if (!catalog) {
+        return reply.code(404).send({ error: `Unknown provider: ${provider}` });
+      }
+      return { models: catalog, provider };
+    }
+  );
+
+  // --- Provider status catalogue ----------------------------------------
+  // Maps each known provider to a label, auth variants, and how to detect if configured.
+  const PROVIDER_CATALOG: Array<{
+    id: string;
+    label: string;
+    description: string;
+    authMode: string;
+    configured: boolean;
+  }> = [
+    {
+      id: "anthropic",
+      label: "Anthropic (API key)",
+      description: "Claude models via API key",
+      authMode: "api_key",
+      configured: Boolean(providerRouter.hasAdapter("anthropic")),
+    },
+    {
+      id: "anthropic-oauth",
+      label: "Anthropic (OAuth / Claude Code)",
+      description: "Claude models via Claude Code OAuth — no API key needed",
+      authMode: "oauth_claude_code",
+      configured: Boolean(providerRouter.hasAdapter("anthropic")),
+    },
+    {
+      id: "openai",
+      label: "OpenAI (API key)",
+      description: "GPT-4o, o3, o4-mini via API key",
+      authMode: "api_key",
+      configured: Boolean(providerRouter.hasAdapter("openai")),
+    },
+    {
+      id: "openai-codex",
+      label: "OpenAI (Codex / ChatGPT Plus OAuth)",
+      description: "GPT-4o and Codex models via ChatGPT Plus OAuth — no API key needed",
+      authMode: "oauth_codex",
+      configured: Boolean(providerRouter.hasAdapter("openai")),
+    },
+    {
+      id: "gemini",
+      label: "Google Gemini",
+      description: "Gemini 2.5 Pro / Flash via API key",
+      authMode: "api_key",
+      configured: Boolean(providerRouter.hasAdapter("gemini")),
+    },
+    {
+      id: "mistral",
+      label: "Mistral AI",
+      description: "Mistral Large and Codestral via API key",
+      authMode: "api_key",
+      configured: Boolean(providerRouter.hasAdapter("mistral")),
+    },
+  ];
+
+  // GET /dashboard/api/providers — list available providers with auth status
+  server.get("/dashboard/api/providers", async () => {
+    const activeProvider = runtimeSettings.provider || providerRouter.primaryType;
+    return {
+      providers: PROVIDER_CATALOG.map((p) => ({
+        ...p,
+        active: p.id === activeProvider,
+      })),
+      activeProvider,
+      defaultModel: runtimeSettings.defaultModel,
+    };
+  });
+
+  // POST /dashboard/api/providers/active — set active provider + model
+  server.post<{ Body: { provider?: string; model?: string } }>(
+    "/dashboard/api/providers/active",
+    async (request, reply) => {
+      const { provider, model } = request.body as { provider?: string; model?: string };
+      if (provider !== undefined) {
+        runtimeSettings = { ...runtimeSettings, provider };
+      }
+      if (model !== undefined) {
+        runtimeSettings = { ...runtimeSettings, defaultModel: model };
+      }
+      try {
+        fs.writeFileSync(settingsPath, JSON.stringify(runtimeSettings, null, 2), "utf-8");
+      } catch (err) {
+        server.log.warn({ err }, "Failed to persist settings after provider switch");
+      }
+      return {
+        ok: true,
+        activeProvider: runtimeSettings.provider,
+        defaultModel: runtimeSettings.defaultModel,
+      };
+    }
+  );
 
   server.get("/dashboard/api/scopes", async () => {
     return mappingStore.listScopes();

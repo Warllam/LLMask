@@ -46,7 +46,15 @@ export class ResponsesProxyRoute {
 
     let parsedBody: ResponsesRequest;
     try {
-      parsedBody = responsesRequestSchema.parse(request.body);
+      // Apply model override: X-LLMask-Model header > request body > LLMASK_DEFAULT_MODEL
+      const rawBody = { ...(request.body as Record<string, unknown>) };
+      const modelHeader = getHeaderValue(request.headers["x-llmask-model"] as string | string[] | undefined);
+      if (modelHeader) {
+        rawBody.model = modelHeader;
+      } else if (!rawBody.model) {
+        rawBody.model = this.deps.config.defaultModel;
+      }
+      parsedBody = responsesRequestSchema.parse(rawBody);
     } catch (error) {
       const invalid = openAiError(400, "Invalid responses payload", "invalid_request_error", "INVALID_BODY");
       this.deps.auditService.record({

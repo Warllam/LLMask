@@ -12,6 +12,8 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   maskedContent?: string;
+  /** Provider + model that produced this assistant message */
+  meta?: { provider: string; model: string };
 }
 
 interface ChatProps {
@@ -221,6 +223,15 @@ interface MessageBubbleProps {
   isLast: boolean;
 }
 
+const PROVIDER_SHORT: Record<string, string> = {
+  anthropic: "Claude",
+  "anthropic-oauth": "Claude",
+  openai: "OpenAI",
+  "openai-codex": "Codex",
+  gemini: "Gemini",
+  mistral: "Mistral",
+};
+
 const MessageBubble = memo(function MessageBubble({ msg, viewMode, isStreaming, isLast }: MessageBubbleProps) {
   const displayContent = viewMode === "masked" && msg.maskedContent
     ? msg.maskedContent
@@ -263,6 +274,13 @@ const MessageBubble = memo(function MessageBubble({ msg, viewMode, isStreaming, 
           </span>
         ))}
       </div>
+      {msg.meta && (
+        <div className="mt-1 flex items-center gap-1">
+          <span className="text-[10px] text-muted-foreground/60 font-mono">
+            {PROVIDER_SHORT[msg.meta.provider] ?? msg.meta.provider} · {msg.meta.model}
+          </span>
+        </div>
+      )}
     </div>
   );
 });
@@ -282,14 +300,27 @@ export function Chat({ sessionId, onSessionUpdate }: ChatProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const activeSessionId = useRef<string | null>(sessionId ?? null);
 
-  // Model selector state
+  // Provider + model selector state
+  const [selectedProvider, setSelectedProvider] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
+  const [providerDropdownOpen, setProviderDropdownOpen] = useState(false);
   const [modelDropdownOpen, setModelDropdownOpen] = useState(false);
+  const providerDropdownRef = useRef<HTMLDivElement>(null);
   const modelDropdownRef = useRef<HTMLDivElement>(null);
   const [fetchedModels, setFetchedModels] = useState<Array<{ id: string; label: string; provider: string }>>([]);
+  const [fetchedProviders, setFetchedProviders] = useState<Array<{ id: string; label: string; configured: boolean }>>([]);
 
-  // Fetch available models from backend
+  // Fetch providers and models from backend
   useEffect(() => {
+    fetch("/dashboard/api/providers")
+      .then(r => r.json())
+      .then((data: { providers: Array<{ id: string; label: string; configured: boolean }>; activeProvider: string; defaultModel: string }) => {
+        setFetchedProviders(data.providers ?? []);
+        if (data.activeProvider) setSelectedProvider(data.activeProvider);
+        if (data.defaultModel) setSelectedModel(data.defaultModel);
+      })
+      .catch(() => setFetchedProviders([]));
+
     fetch("/dashboard/api/models")
       .then(r => r.json())
       .then((data: { models: Array<{ id: string; label: string; provider: string }> }) => {
@@ -298,7 +329,20 @@ export function Chat({ sessionId, onSessionUpdate }: ChatProps) {
       .catch(() => setFetchedModels([]));
   }, []);
 
-  const providerLabels: Record<string, string> = { anthropic: "Anthropic", openai: "OpenAI", gemini: "Google", mistral: "Mistral" };
+  // When provider changes: reset model selection
+  const handleProviderChange = (providerId: string) => {
+    if (providerId === selectedProvider) return;
+    setSelectedProvider(providerId);
+    setSelectedModel("");
+    // Don't clear messages — keep history visible but signal context break
+    setMessages((prev) => prev.length > 0
+      ? [...prev, { role: "assistant" as const, content: `_[Switched to provider: **${providerId}**. New context started.]_` }]
+      : prev
+    );
+    activeSessionId.current = null;
+  };
+
+  const providerLabels: Record<string, string> = { anthropic: "Anthropic", "anthropic-oauth": "Claude OAuth", openai: "OpenAI", "openai-codex": "Codex", gemini: "Google", mistral: "Mistral" };
 
   const availableModels = useMemo(() => {
     const auto = { id: "", label: "Auto", group: "default" };
@@ -315,11 +359,14 @@ export function Chat({ sessionId, onSessionUpdate }: ChatProps) {
     return found?.label ?? "Auto";
   }, [selectedModel, availableModels]);
 
-  // Close model dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (modelDropdownRef.current && !modelDropdownRef.current.contains(e.target as Node)) {
         setModelDropdownOpen(false);
+      }
+      if (providerDropdownRef.current && !providerDropdownRef.current.contains(e.target as Node)) {
+        setProviderDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -424,10 +471,13 @@ export function Chat({ sessionId, onSessionUpdate }: ChatProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
-          history: messages.map((m) => ({ role: m.role, content: m.content })),
+          history: messages
+            .filter((m) => !m.content.startsWith("_[Switched to provider:"))
+            .map((m) => ({ role: m.role, content: m.content })),
           sessionId: activeSessionId.current ?? undefined,
           excludeEntities: overrideExclusions,
           ...(selectedModel ? { model: selectedModel } : {}),
+          ...(selectedProvider ? { provider: selectedProvider } : {}),
         }),
       });
 
@@ -440,6 +490,7 @@ export function Chat({ sessionId, onSessionUpdate }: ChatProps) {
       let assistantContent = "";
       let obfuscatedUserText = "";
       let remapPairs: Array<[string, string]> = [];
+      const messageMeta = { provider: selectedProvider, model: selectedModel };
 
       setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
@@ -521,16 +572,15 @@ export function Chat({ sessionId, onSessionUpdate }: ChatProps) {
 
         // The streamed assistant content IS what the LLM produced (with pseudonyms).
         // Apply remap to get the de-anonymized "original" version.
-        if (remapPairs.length > 0) {
-          const lastIdx = updated.length - 1;
-          if (lastIdx >= 0 && updated[lastIdx].role === "assistant") {
-            const rawContent = updated[lastIdx].content;
-            updated[lastIdx] = {
-              ...updated[lastIdx],
-              content: applyRemap(rawContent, remapPairs),
-              maskedContent: rawContent,
-            };
-          }
+        const lastIdx = updated.length - 1;
+        if (lastIdx >= 0 && updated[lastIdx].role === "assistant") {
+          const rawContent = updated[lastIdx].content;
+          updated[lastIdx] = {
+            ...updated[lastIdx],
+            content: remapPairs.length > 0 ? applyRemap(rawContent, remapPairs) : rawContent,
+            maskedContent: remapPairs.length > 0 ? rawContent : undefined,
+            meta: (messageMeta.provider || messageMeta.model) ? messageMeta : undefined,
+          };
         }
 
         return updated;
@@ -696,6 +746,48 @@ export function Chat({ sessionId, onSessionUpdate }: ChatProps) {
               disabled={streaming}
             />
             <div className="flex items-center gap-0.5 p-1.5">
+              {/* Provider selector */}
+              {fetchedProviders.length > 0 && (
+                <div className="relative" ref={providerDropdownRef}>
+                  <button
+                    onClick={() => setProviderDropdownOpen(o => !o)}
+                    disabled={streaming}
+                    title="Select provider"
+                    className={cn(
+                      "flex items-center gap-1 h-8 px-2 rounded-lg text-[11px] font-medium transition-colors",
+                      selectedProvider
+                        ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    )}
+                  >
+                    <span className="max-w-[70px] truncate">
+                      {selectedProvider ? (providerLabels[selectedProvider] ?? selectedProvider) : "Provider"}
+                    </span>
+                    <ChevronDown className={cn("h-3 w-3 transition-transform", providerDropdownOpen && "rotate-180")} />
+                  </button>
+                  {providerDropdownOpen && (
+                    <div className="absolute bottom-full mb-1 right-0 w-56 rounded-lg border border-border bg-card shadow-lg z-50 py-1 max-h-[300px] overflow-y-auto">
+                      {fetchedProviders.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => { handleProviderChange(p.id); setProviderDropdownOpen(false); }}
+                          className={cn(
+                            "w-full text-left px-3 py-2 text-[12px] hover:bg-muted transition-colors",
+                            selectedProvider === p.id ? "text-primary font-medium bg-primary/5" : "text-foreground"
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span>{p.label}</span>
+                            {p.configured && (
+                              <span className="text-[9px] text-emerald-600 dark:text-emerald-400">configured</span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               {/* Model selector */}
               <div className="relative" ref={modelDropdownRef}>
                 <button

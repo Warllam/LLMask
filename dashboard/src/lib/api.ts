@@ -18,6 +18,8 @@ import type {
   AppSettings,
   CustomRule,
   TestRuleResult,
+  ProvidersResponse,
+  ModelInfo,
 } from "./types";
 import { authStore } from "./auth";
 
@@ -228,6 +230,20 @@ export const api = {
       throw new Error(err.error || `API error ${res.status}`);
     }
     return res.json() as Promise<TestRuleResult>;
+  },
+
+  // ── Providers ─────────────────────────────────────────────────────────────
+  providers: () => fetchJson<ProvidersResponse>("/providers"),
+  modelsByProvider: (provider: string) =>
+    fetchJson<{ models: ModelInfo[]; provider: string }>(`/models/${encodeURIComponent(provider)}`),
+  setActiveProvider: async (provider: string, model?: string) => {
+    const res = await fetch(`${BASE}/providers/active`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ provider, model }),
+    });
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return res.json() as Promise<{ ok: true; activeProvider: string; defaultModel: string }>;
   },
 };
 
