@@ -11,7 +11,10 @@ const envSchema = z.object({
   FALLBACK_PROVIDER: z.string().default(""),
 
   // OpenAI
-  OPENAI_AUTH_MODE: z.enum(["api_key", "oauth_codex"]).default("api_key"),
+  OPENAI_AUTH_MODE: z.preprocess(
+    (v) => (v === "codex_oauth" ? "oauth_codex" : v),
+    z.enum(["api_key", "oauth_codex"]).default("api_key")
+  ),
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_BASE_URL: z.string().default("https://api.openai.com"),
   OPENAI_OAUTH_TOKEN_PATH: z.string().optional(),
@@ -118,6 +121,9 @@ const envSchema = z.object({
   // TLS/HTTPS
   LLMASK_TLS_CERT: z.string().default(""),
   LLMASK_TLS_KEY: z.string().default(""),
+
+  // Default model used when request does not specify one
+  LLMASK_DEFAULT_MODEL: z.string().default("claude-sonnet-4-6"),
 
   // Global rate limit (per-IP, requests/minute, 0 = disabled)
   LLMASK_RATE_LIMIT: z.coerce.number().int().min(0).default(0),
@@ -246,6 +252,8 @@ export type AppConfig = {
   mistralApiKey: string;
   mistralBaseUrl: string;
 
+  defaultModel: string;
+
   oidcIssuerUrl: string;
   oidcClientId: string;
   oidcJwksUrl: string;
@@ -364,6 +372,8 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
 
     mistralApiKey: parsed.MISTRAL_API_KEY,
     mistralBaseUrl: parsed.MISTRAL_BASE_URL.replace(/\/+$/, ""),
+
+    defaultModel: parsed.LLMASK_DEFAULT_MODEL,
 
     oidcIssuerUrl: parsed.LLMASK_OIDC_ISSUER_URL,
     oidcClientId: parsed.LLMASK_OIDC_CLIENT_ID,

@@ -459,4 +459,92 @@ program
     sseReq.end();
   });
 
+// ─── auth ─────────────────────────────────────────────────────────────────────
+
+const authCmd = program
+  .command("auth")
+  .description("Authenticate with an AI provider");
+
+authCmd
+  .command("openai-codex")
+  .description("Authenticate with OpenAI via OAuth (Codex / ChatGPT Plus — no API key needed)")
+  .option("--token-path <path>", "Where to store the OAuth token (default: data/openai-codex-credentials.json)")
+  .action(async (opts: { tokenPath?: string }) => {
+    // Dynamically import to keep startup fast for other commands
+    const {
+      generateOpenAiCodexPkce,
+      createOpenAiCodexState,
+      buildOpenAiCodexAuthorizeUrl,
+      startOpenAiCodexCallbackServer,
+      exchangeOpenAiCodexAuthorizationCode,
+      writeOpenAiCodexTokenFile,
+    } = await import("../shared/openai-codex-oauth");
+
+    const tokenPath = opts.tokenPath || path.join(process.cwd(), "data", "openai-codex-credentials.json");
+
+    console.log("\nOpenAI OAuth Login\n");
+    console.log("This will authenticate you with OpenAI using your ChatGPT Plus / Codex subscription.");
+    console.log("No API key is required.\n");
+
+    const { verifier, challenge } = generateOpenAiCodexPkce();
+    const state = createOpenAiCodexState();
+    const authorizeUrl = buildOpenAiCodexAuthorizeUrl({ state, codeChallenge: challenge });
+
+    // Start local callback server
+    const callbackServer = await startOpenAiCodexCallbackServer(state);
+    if (!callbackServer.isListening) {
+      console.error("Error: Could not start local callback server on port 1455.");
+      console.error("Make sure no other process is using that port and try again.");
+      process.exit(1);
+    }
+
+    console.log("Opening your browser to authenticate with OpenAI...");
+    console.log(`\n  ${authorizeUrl}\n`);
+
+    // Try to open browser automatically (best-effort)
+    try {
+      const { exec } = await import("node:child_process");
+      const opener =
+        process.platform === "win32" ? "start" :
+        process.platform === "darwin" ? "open" : "xdg-open";
+      exec(`${opener} "${authorizeUrl}"`);
+    } catch {
+      console.log("Could not open browser automatically. Please open the URL above manually.");
+    }
+
+    console.log("Waiting for OAuth callback on http://localhost:1455/auth/callback...");
+    console.log("(Press Ctrl+C to cancel)\n");
+
+    let code: string | null = null;
+    try {
+      code = await callbackServer.waitForCode(120_000);
+    } finally {
+      await callbackServer.close();
+    }
+
+    if (!code) {
+      console.error("Authentication timed out or was cancelled.");
+      process.exit(1);
+    }
+
+    console.log("Authorization code received. Exchanging for tokens...");
+
+    let tokenSet;
+    try {
+      tokenSet = await exchangeOpenAiCodexAuthorizationCode({ code, codeVerifier: verifier });
+    } catch (err) {
+      console.error(`Token exchange failed: ${(err as Error).message}`);
+      process.exit(1);
+    }
+
+    writeOpenAiCodexTokenFile(tokenPath, tokenSet);
+
+    console.log(`\nAuthentication successful!`);
+    console.log(`Tokens stored in: ${tokenPath}`);
+    console.log("\nTo use this OAuth token instead of an API key, add to your .env:");
+    console.log(`  OPENAI_AUTH_MODE=oauth_codex`);
+    console.log(`  OPENAI_OAUTH_TOKEN_PATH=${tokenPath}`);
+    console.log("\nThen restart LLMask: llmask start\n");
+  });
+
 program.parse();

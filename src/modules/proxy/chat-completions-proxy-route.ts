@@ -59,7 +59,15 @@ export class ChatCompletionsProxyRoute {
 
     let parsedBody: ChatCompletionsRequest;
     try {
-      parsedBody = chatCompletionsRequestSchema.parse(request.body);
+      // Apply model override: X-LLMask-Model header > request body > LLMASK_DEFAULT_MODEL
+      const rawBody = { ...(request.body as Record<string, unknown>) };
+      const modelHeader = getHeaderValue(request.headers["x-llmask-model"] as string | string[] | undefined);
+      if (modelHeader) {
+        rawBody.model = modelHeader;
+      } else if (!rawBody.model) {
+        rawBody.model = this.deps.config.defaultModel;
+      }
+      parsedBody = chatCompletionsRequestSchema.parse(rawBody);
     } catch (error) {
       const invalid = openAiError(400, "Invalid request payload", "invalid_request_error", "INVALID_BODY");
       this.deps.auditService.record({
