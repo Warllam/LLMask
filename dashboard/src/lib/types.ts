@@ -213,6 +213,28 @@ export interface AppSettings {
   maskingStrategy: MaskingStrategy;
   retentionDays: number;
   provider: string;
+  defaultModel: string;
+}
+
+export interface ProviderInfo {
+  id: string;
+  label: string;
+  description: string;
+  authMode: string;
+  configured: boolean;
+  active: boolean;
+}
+
+export interface ProvidersResponse {
+  providers: ProviderInfo[];
+  activeProvider: string;
+  defaultModel: string;
+}
+
+export interface ModelInfo {
+  id: string;
+  label: string;
+  provider?: string;
 }
 
 // ── GDPR Types ────────────────────────────────────────────────────────────────

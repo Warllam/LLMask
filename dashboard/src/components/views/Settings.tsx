@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   AlertCircle,
   ChevronDown,
+  Cpu,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import type { AppSettings, MaskingStrategy } from "@/lib/types";
+import type { AppSettings, MaskingStrategy, ProviderInfo, ModelInfo } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
 // Strategy catalogue
@@ -67,13 +68,48 @@ const strategies: Array<{
   },
 ];
 
-const providers = [
-  { id: "anthropic", label: "Anthropic (Claude)", description: "Modèles Claude — Haiku, Sonnet, Opus" },
-  { id: "openai", label: "OpenAI (GPT)", description: "Modèles GPT-4o, o3, o4-mini" },
-  { id: "gemini", label: "Google Gemini", description: "Modèles Gemini 2.5 Pro / Flash" },
-  { id: "mistral", label: "Mistral AI", description: "Modèles Mistral Large" },
-  { id: "litellm", label: "LiteLLM (proxy)", description: "Proxy unifié multi-fournisseurs" },
+// Static fallback provider list (used when API is unavailable)
+const FALLBACK_PROVIDERS = [
+  { id: "anthropic", label: "Anthropic (API key)", description: "Claude Haiku, Sonnet, Opus via API key", authMode: "api_key", configured: false, active: false },
+  { id: "anthropic-oauth", label: "Anthropic (OAuth / Claude Code)", description: "Claude models via Claude Code OAuth — no API key needed", authMode: "oauth_claude_code", configured: false, active: false },
+  { id: "openai", label: "OpenAI (API key)", description: "GPT-4o, o3, o4-mini via API key", authMode: "api_key", configured: false, active: false },
+  { id: "openai-codex", label: "OpenAI (Codex / ChatGPT Plus OAuth)", description: "GPT-4o via ChatGPT Plus OAuth — no API key needed", authMode: "oauth_codex", configured: false, active: false },
+  { id: "gemini", label: "Google Gemini", description: "Gemini 2.5 Pro / Flash via API key", authMode: "api_key", configured: false, active: false },
+  { id: "mistral", label: "Mistral AI", description: "Mistral Large and Codestral via API key", authMode: "api_key", configured: false, active: false },
 ];
+
+// Model catalogue per provider (used as fallback when API is unavailable)
+const MODEL_CATALOG: Record<string, ModelInfo[]> = {
+  anthropic: [
+    { id: "claude-opus-4-20250514", label: "Claude Opus 4" },
+    { id: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
+    { id: "claude-haiku-3-5-20241022", label: "Claude Haiku 3.5" },
+  ],
+  "anthropic-oauth": [
+    { id: "claude-opus-4-20250514", label: "Claude Opus 4" },
+    { id: "claude-sonnet-4-20250514", label: "Claude Sonnet 4" },
+    { id: "claude-haiku-3-5-20241022", label: "Claude Haiku 3.5" },
+  ],
+  openai: [
+    { id: "gpt-4o", label: "GPT-4o" },
+    { id: "gpt-4o-mini", label: "GPT-4o Mini" },
+    { id: "o3", label: "o3" },
+    { id: "o4-mini", label: "o4-mini" },
+  ],
+  "openai-codex": [
+    { id: "gpt-4o", label: "GPT-4o" },
+    { id: "gpt-4o-mini", label: "GPT-4o Mini" },
+    { id: "o3-mini", label: "o3-mini" },
+  ],
+  gemini: [
+    { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+    { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+  ],
+  mistral: [
+    { id: "mistral-large-latest", label: "Mistral Large" },
+    { id: "codestral-latest", label: "Codestral" },
+  ],
+};
 
 const retentionOptions = [
   { value: 7, label: "7 jours / 7 days" },
@@ -92,33 +128,42 @@ export function Settings() {
   const [draft, setDraft] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [providerList, setProviderList] = useState<ProviderInfo[]>(FALLBACK_PROVIDERS);
 
   useEffect(() => {
-    api.getSettings()
-      .then((s) => {
-        setSettings(s);
-        setDraft(s);
-      })
-      .catch(() => {
-        // Fallback defaults if backend not yet updated
-        const defaults: AppSettings = { maskingStrategy: "pseudonymization", retentionDays: 30, provider: "anthropic" };
-        setSettings(defaults);
-        setDraft(defaults);
-      })
-      .finally(() => setLoading(false));
+    Promise.all([
+      api.getSettings().catch(() => ({
+        maskingStrategy: "pseudonymization" as const,
+        retentionDays: 30,
+        provider: "anthropic",
+        defaultModel: "",
+      })),
+      api.providers().catch(() => null),
+    ]).then(([s, provData]) => {
+      setSettings(s);
+      setDraft(s);
+      if (provData) setProviderList(provData.providers);
+    }).finally(() => setLoading(false));
   }, []);
 
   const isDirty = draft && settings && (
     draft.maskingStrategy !== settings.maskingStrategy ||
     draft.retentionDays !== settings.retentionDays ||
-    draft.provider !== settings.provider
+    draft.provider !== settings.provider ||
+    draft.defaultModel !== settings.defaultModel
   );
+
+  // Models available for the currently-selected provider
+  const availableModels: ModelInfo[] = MODEL_CATALOG[draft?.provider ?? ""] ?? [];
 
   const handleSave = async () => {
     if (!draft) return;
     setSaving(true);
     try {
-      const res = await api.updateSettings(draft);
+      const [res] = await Promise.all([
+        api.updateSettings(draft),
+        api.setActiveProvider(draft.provider, draft.defaultModel || undefined),
+      ]);
       setSettings(res.settings);
       setDraft(res.settings);
       addToast("Réglages sauvegardés / Settings saved", "success");
@@ -253,12 +298,12 @@ export function Settings() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {providers.map((p) => {
+            {providerList.map((p) => {
               const selected = draft.provider === p.id;
               return (
                 <button
                   key={p.id}
-                  onClick={() => setDraft((d) => d ? { ...d, provider: p.id } : d)}
+                  onClick={() => setDraft((d) => d ? { ...d, provider: p.id, defaultModel: "" } : d)}
                   className={cn(
                     "text-left p-3.5 rounded-xl border-2 transition-all",
                     selected
@@ -267,9 +312,16 @@ export function Settings() {
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="font-semibold text-sm">{p.label}</div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5">{p.description}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <div className="font-semibold text-sm">{p.label}</div>
+                        {p.configured && (
+                          <span className="inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-1.5 py-0.5 text-[9px] font-medium text-emerald-700 dark:text-emerald-400">
+                            configured
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{p.description}</div>
                     </div>
                     <div className={cn(
                       "h-4 w-4 rounded-full border-2 flex-shrink-0 mt-0.5",
@@ -289,6 +341,53 @@ export function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Default model */}
+      {availableModels.length > 0 && (
+        <Card className="animate-fade-in-up" style={{ animationDelay: "150ms" }}>
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <Cpu className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">Modèle par défaut</CardTitle>
+              <span className="text-xs text-muted-foreground font-normal">/ Default model</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Modèle utilisé quand la requête n'en spécifie pas un.
+              <span className="block opacity-70">Model used when the request does not specify one.</span>
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {availableModels.map((m) => {
+                const selected = draft.defaultModel === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setDraft((d) => d ? { ...d, defaultModel: m.id } : d)}
+                    className={cn(
+                      "text-left p-3.5 rounded-xl border-2 transition-all",
+                      selected
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/30 hover:bg-muted/30"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-semibold text-sm">{m.label}</div>
+                        <div className="text-[11px] text-muted-foreground font-mono mt-0.5">{m.id}</div>
+                      </div>
+                      <div className={cn(
+                        "h-4 w-4 rounded-full border-2 flex-shrink-0 mt-0.5",
+                        selected ? "border-primary bg-primary" : "border-muted-foreground"
+                      )} />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Retention */}
       <Card className="animate-fade-in-up" style={{ animationDelay: "200ms" }}>
