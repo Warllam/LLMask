@@ -21,6 +21,7 @@ const Settings = lazy(() => import("@/components/views/Settings").then((m) => ({
 const RequestLog = lazy(() => import("@/components/views/RequestLog").then((m) => ({ default: m.RequestLog })));
 const CustomRules = lazy(() => import("@/components/views/CustomRules").then((m) => ({ default: m.CustomRules })));
 const Sessions = lazy(() => import("@/components/views/Sessions").then((m) => ({ default: m.Sessions })));
+const CliMonitor = lazy(() => import("@/components/views/CliMonitor").then((m) => ({ default: m.CliMonitor })));
 
 function ViewFallback() {
   return (
@@ -93,6 +94,9 @@ export function App() {
       } else if (hash === "sessions") {
         setCurrentView("sessions");
         setSelectedSession(null);
+      } else if (hash === "cli-monitor") {
+        setCurrentView("cli-monitor");
+        setSelectedSession(null);
       } else if (hash === "chat") {
         setChatSessionId(null);
         setCurrentView("chat");
@@ -142,6 +146,8 @@ export function App() {
       window.location.hash = "custom-rules";
     } else if (view === "sessions") {
       window.location.hash = "sessions";
+    } else if (view === "cli-monitor") {
+      window.location.hash = "cli-monitor";
     } else {
       window.location.hash = "";
     }
@@ -254,6 +260,7 @@ export function App() {
               {currentView === "requestlog" && <RequestLog />}
               {currentView === "custom-rules" && <CustomRules />}
               {currentView === "sessions" && <Sessions />}
+              {currentView === "cli-monitor" && <CliMonitor />}
               {currentView === "chat" && <Chat sessionId={chatSessionId} onSessionUpdate={refreshSessions} />}
             </Suspense>
             </ErrorBoundary>

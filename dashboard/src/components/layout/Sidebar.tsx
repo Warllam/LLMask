@@ -20,6 +20,7 @@ import {
   SlidersHorizontal,
   Filter,
   Terminal,
+  Monitor,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -126,6 +127,7 @@ export function Sidebar({
             { view: "chat", icon: MessageSquare, label: "Chat" },
             { view: "custom-rules", icon: Filter, label: "Custom Rules" },
             { view: "sessions", icon: Terminal, label: "Code Sessions" },
+            { view: "cli-monitor", icon: Monitor, label: "CLI Monitor" },
           ] as const
         ).map(({ view, icon: Icon, label }) => (
           <Button
@@ -353,6 +355,7 @@ export function Sidebar({
         <NavItem icon={MessageSquare} view="chat" label="Assistant IA" sublabel="AI chat" currentView={currentView} onNavigate={onNavigate} />
         <NavItem icon={Filter} view="custom-rules" label="Règles personnalisées" sublabel="Custom rules" currentView={currentView} onNavigate={onNavigate} />
         <NavItem icon={Terminal} view="sessions" label="Sessions de code" sublabel="Code sessions" currentView={currentView} onNavigate={onNavigate} />
+        <NavItem icon={Monitor} view="cli-monitor" label="CLI Monitor" sublabel="Activity dashboard" currentView={currentView} onNavigate={onNavigate} />
         <div className="h-px bg-border/50 my-1" />
         <NavItem icon={HeartPulse} view="health" label="État du système" sublabel="System health" currentView={currentView} onNavigate={onNavigate} />
         <NavItem icon={Lock} view="gdpr" label="Conformité RGPD" sublabel="GDPR compliance" currentView={currentView} onNavigate={onNavigate} />

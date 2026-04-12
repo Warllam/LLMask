@@ -70,7 +70,9 @@ export function registerDashboardRoutes(
         request.url === "/dashboard/" ||
         request.url.startsWith("/dashboard/assets/") ||
         // Allow login endpoint itself
-        request.url === "/dashboard/api/auth/login"
+        request.url === "/dashboard/api/auth/login" ||
+        // Allow CLI report endpoint (called by llmask code, no browser token)
+        request.url === "/dashboard/api/code-sessions/report"
       ) return;
 
       const authHeader = request.headers.authorization;
@@ -587,6 +589,67 @@ export function registerDashboardRoutes(
       return mappingStore.getCodeSessionTurns(request.params.sessionId);
     }
   );
+
+  /** GET /dashboard/api/code-sessions/stats — aggregate CLI activity stats */
+  server.get("/dashboard/api/code-sessions/stats", async () => {
+    const sessions = mappingStore.listCodeSessions(1000);
+    const totalSessions = sessions.length;
+    const totalTurns = sessions.reduce((s, x) => s + x.turnsCount, 0);
+    const totalElementsMasked = sessions.reduce((s, x) => s + x.totalElementsMasked, 0);
+    const lastActivityAt = sessions.length > 0
+      ? sessions.reduce((latest, s) => s.lastTurnAt > latest ? s.lastTurnAt : latest, sessions[0].lastTurnAt)
+      : null;
+
+    // Most used model by turn count
+    const modelCounts: Record<string, number> = {};
+    for (const s of sessions) {
+      modelCounts[s.model] = (modelCounts[s.model] ?? 0) + s.turnsCount;
+    }
+    const mostUsedModel = Object.entries(modelCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+    // Activity by day (last 7 days) — turns per day based on lastTurnAt
+    const now = new Date();
+    const activityByDay: Array<{ date: string; turns: number }> = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      activityByDay.push({ date: d.toISOString().slice(0, 10), turns: 0 });
+    }
+    for (const s of sessions) {
+      const day = s.lastTurnAt.slice(0, 10);
+      const entry = activityByDay.find((e) => e.date === day);
+      if (entry) entry.turns += s.turnsCount;
+    }
+
+    // File frequency across all turns
+    let totalFilesScanned = 0;
+    const fileFrequency: Record<string, number> = {};
+    for (const s of sessions) {
+      const turns = mappingStore.getCodeSessionTurns(s.sessionId);
+      for (const t of turns) {
+        totalFilesScanned += t.filesScanned.length;
+        for (const f of t.filesScanned) {
+          fileFrequency[f] = (fileFrequency[f] ?? 0) + 1;
+        }
+      }
+    }
+    const topFiles = Object.entries(fileFrequency)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([file, count]) => ({ file, count }));
+
+    return {
+      totalSessions,
+      totalTurns,
+      totalElementsMasked,
+      totalFilesScanned,
+      lastActivityAt,
+      mostUsedModel,
+      modelCounts,
+      activityByDay,
+      topFiles,
+    };
+  });
 
   // ---- Custom Rules API ----
 

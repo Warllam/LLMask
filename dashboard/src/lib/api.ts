@@ -22,6 +22,7 @@ import type {
   ModelInfo,
   CodeSessionSummary,
   CodeSessionTurn,
+  CodeSessionStats,
 } from "./types";
 import { authStore } from "./auth";
 
@@ -239,6 +240,8 @@ export const api = {
     fetchJson<CodeSessionSummary[]>(`/code-sessions?limit=${limit}`),
   codeSessionTurns: (sessionId: string) =>
     fetchJson<CodeSessionTurn[]>(`/code-sessions/${encodeURIComponent(sessionId)}/turns`),
+  codeSessionStats: () =>
+    fetchJson<CodeSessionStats>("/code-sessions/stats"),
 
   // ── Providers ─────────────────────────────────────────────────────────────
   providers: () => fetchJson<ProvidersResponse>("/providers"),

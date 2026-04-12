@@ -205,7 +205,7 @@ export interface ActivityEntry {
   status: "success" | "error";
 }
 
-export type View = "welcome" | "conversation" | "chat" | "activity" | "config" | "health" | "gdpr" | "settings" | "requestlog" | "custom-rules" | "sessions";
+export type View = "welcome" | "conversation" | "chat" | "activity" | "config" | "health" | "gdpr" | "settings" | "requestlog" | "custom-rules" | "sessions" | "cli-monitor";
 
 export type MaskingStrategy = "pseudonymization" | "redaction" | "generalization" | "tokenization";
 
@@ -328,4 +328,16 @@ export interface CodeSessionTurn {
   filesScanned: string[];
   elementsMasked: number;
   createdAt: string;
+}
+
+export interface CodeSessionStats {
+  totalSessions: number;
+  totalTurns: number;
+  totalElementsMasked: number;
+  totalFilesScanned: number;
+  lastActivityAt: string | null;
+  mostUsedModel: string | null;
+  modelCounts: Record<string, number>;
+  activityByDay: Array<{ date: string; turns: number }>;
+  topFiles: Array<{ file: string; count: number }>;
 }
