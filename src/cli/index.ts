@@ -761,4 +761,32 @@ program
     }
   });
 
+// ─── code ─────────────────────────────────────────────────────────────────────
+
+program
+  .command("code [directory]")
+  .description("Interactive coding agent — privacy-masked Claude Code session for a project directory")
+  .option("--model <model>", "Claude model to use (e.g. claude-opus-4-5)")
+  .option("--verbose", "Show masking details (replaced entities) before each send")
+  .option("--strategy <strategy>", "Masking strategy: aggressive | values-only | pii-only | code-aware", "code-aware")
+  .option("--no-mask", "Disable masking — pass prompts to Claude unmodified")
+  .option("--dashboard-port <port>", "LLMask server port for session reporting", "3456")
+  .action(async (directory: string | undefined, opts: {
+    model?: string;
+    verbose?: boolean;
+    strategy?: string;
+    mask: boolean;
+    dashboardPort?: string;
+  }) => {
+    const targetDir = directory ?? process.cwd();
+    const { runCodeSession } = await import("./code-session");
+    await runCodeSession(targetDir, {
+      model: opts.model,
+      verbose: opts.verbose,
+      strategy: opts.strategy,
+      mask: opts.mask,
+      dashboardPort: opts.dashboardPort ? parseInt(opts.dashboardPort, 10) : 3456,
+    });
+  });
+
 program.parse();

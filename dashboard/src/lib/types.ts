@@ -205,7 +205,7 @@ export interface ActivityEntry {
   status: "success" | "error";
 }
 
-export type View = "welcome" | "conversation" | "chat" | "activity" | "config" | "health" | "gdpr" | "settings" | "requestlog" | "custom-rules";
+export type View = "welcome" | "conversation" | "chat" | "activity" | "config" | "health" | "gdpr" | "settings" | "requestlog" | "custom-rules" | "sessions";
 
 export type MaskingStrategy = "pseudonymization" | "redaction" | "generalization" | "tokenization";
 
@@ -304,4 +304,28 @@ export interface TestRuleResult {
   matches: string[];
   preview: string;
   error?: string;
+}
+
+// ── Code Sessions (llmask code CLI agent) ─────────────────────────────────────
+
+export interface CodeSessionSummary {
+  sessionId: string;
+  projectName: string;
+  projectDir: string;
+  strategy: string;
+  model: string;
+  turnsCount: number;
+  totalElementsMasked: number;
+  startedAt: string;
+  lastTurnAt: string;
+}
+
+export interface CodeSessionTurn {
+  id: number;
+  sessionId: string;
+  prompt: string;
+  response: string;
+  filesScanned: string[];
+  elementsMasked: number;
+  createdAt: string;
 }

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
-import type { AuditLogEntry, AuditLogPage, AuditLogQuery, DashboardStats, DsiStats, EraseResult, ExportData, GdprEvent, LeakContext, LeakReport, MappingEntry, MappingStore, RequestLogEntry, RetentionResult, ScopeSummary, SessionSummary } from "./mapping-store";
+import type { AuditLogEntry, AuditLogPage, AuditLogQuery, CodeSessionSummary, CodeSessionTurn, DashboardStats, DsiStats, EraseResult, ExportData, GdprEvent, LeakContext, LeakReport, MappingEntry, MappingStore, RequestLogEntry, RetentionResult, ScopeSummary, SessionSummary } from "./mapping-store";
 
 type MappingRow = {
   scope_id: string;
@@ -118,6 +118,31 @@ export class SqliteMappingStore implements MappingStore {
         enabled           INTEGER NOT NULL DEFAULT 1,
         created_at        TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
       );
+    `);
+
+    // Code sessions tables (added in v3 — llmask code CLI agent)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS code_sessions (
+        session_id    TEXT PRIMARY KEY,
+        project_dir   TEXT NOT NULL,
+        project_name  TEXT NOT NULL,
+        strategy      TEXT NOT NULL DEFAULT 'code-aware',
+        model         TEXT NOT NULL DEFAULT 'claude-sonnet-4-6',
+        started_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        last_turn_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS code_session_turns (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id       TEXT    NOT NULL,
+        prompt           TEXT    NOT NULL,
+        response         TEXT    NOT NULL,
+        files_scanned    TEXT    NOT NULL DEFAULT '[]',
+        elements_masked  INTEGER NOT NULL DEFAULT 0,
+        created_at       TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+      );
+      CREATE INDEX IF NOT EXISTS idx_code_session_turns_session_id
+        ON code_session_turns(session_id);
     `);
   }
 
@@ -828,6 +853,118 @@ export class SqliteMappingStore implements MappingStore {
       shieldLeaks,
       leakDetails: leakDetails.slice(0, 50),
     };
+  }
+
+  // ── Code Sessions (llmask code CLI agent) ─────────────────────────────────
+
+  insertCodeSession(info: {
+    sessionId: string;
+    projectDir: string;
+    projectName: string;
+    strategy: string;
+    model: string;
+  }): void {
+    this.db.prepare(`
+      INSERT OR IGNORE INTO code_sessions (session_id, project_dir, project_name, strategy, model)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(info.sessionId, info.projectDir, info.projectName, info.strategy, info.model);
+  }
+
+  private updateCodeSessionTimestamp(sessionId: string): void {
+    this.db.prepare(`
+      UPDATE code_sessions
+      SET last_turn_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+      WHERE session_id = ?
+    `).run(sessionId);
+  }
+
+  insertCodeSessionTurn(turn: {
+    sessionId: string;
+    prompt: string;
+    response: string;
+    filesScanned: string[];
+    elementsMasked: number;
+  }): void {
+    this.db.prepare(`
+      INSERT INTO code_session_turns (session_id, prompt, response, files_scanned, elements_masked)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(
+      turn.sessionId,
+      turn.prompt,
+      turn.response,
+      JSON.stringify(turn.filesScanned),
+      turn.elementsMasked,
+    );
+    this.updateCodeSessionTimestamp(turn.sessionId);
+  }
+
+  listCodeSessions(limit: number): CodeSessionSummary[] {
+    const rows = this.db.prepare(`
+      SELECT
+        cs.session_id,
+        cs.project_name,
+        cs.project_dir,
+        cs.strategy,
+        cs.model,
+        cs.started_at,
+        cs.last_turn_at,
+        COUNT(cst.id)                          AS turns_count,
+        COALESCE(SUM(cst.elements_masked), 0)  AS total_elements_masked
+      FROM code_sessions cs
+      LEFT JOIN code_session_turns cst ON cs.session_id = cst.session_id
+      GROUP BY cs.session_id
+      ORDER BY cs.last_turn_at DESC
+      LIMIT ?
+    `).all(limit) as Array<{
+      session_id: string;
+      project_name: string;
+      project_dir: string;
+      strategy: string;
+      model: string;
+      started_at: string;
+      last_turn_at: string;
+      turns_count: number;
+      total_elements_masked: number;
+    }>;
+
+    return rows.map((r) => ({
+      sessionId: r.session_id,
+      projectName: r.project_name,
+      projectDir: r.project_dir,
+      strategy: r.strategy,
+      model: r.model,
+      turnsCount: r.turns_count,
+      totalElementsMasked: r.total_elements_masked,
+      startedAt: r.started_at,
+      lastTurnAt: r.last_turn_at,
+    }));
+  }
+
+  getCodeSessionTurns(sessionId: string): CodeSessionTurn[] {
+    const rows = this.db.prepare(`
+      SELECT id, session_id, prompt, response, files_scanned, elements_masked, created_at
+      FROM code_session_turns
+      WHERE session_id = ?
+      ORDER BY id ASC
+    `).all(sessionId) as Array<{
+      id: number;
+      session_id: string;
+      prompt: string;
+      response: string;
+      files_scanned: string;
+      elements_masked: number;
+      created_at: string;
+    }>;
+
+    return rows.map((r) => ({
+      id: r.id,
+      sessionId: r.session_id,
+      prompt: r.prompt,
+      response: r.response,
+      filesScanned: JSON.parse(r.files_scanned || "[]") as string[],
+      elementsMasked: r.elements_masked,
+      createdAt: r.created_at,
+    }));
   }
 }
 
