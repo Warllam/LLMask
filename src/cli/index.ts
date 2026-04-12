@@ -206,9 +206,11 @@ program
       STRATEGIES.forEach((s, i) =>
         console.log(`  ${i + 1}. ${s.id.padEnd(12)}  ${s.description}`)
       );
-      let strategyIdx = 0;
+      const defaultStrategyIdx = STRATEGIES.findIndex(s => s.id === "code-aware");
+      const defaultStrategyNum = defaultStrategyIdx + 1;
+      let strategyIdx = defaultStrategyIdx;
       while (true) {
-        const input = (await ask(rl, "\nSelect strategy [1 = aggressive]: ")).trim() || "1";
+        const input = (await ask(rl, `\nSelect strategy [${defaultStrategyNum} = code-aware]: `)).trim() || String(defaultStrategyNum);
         const n = parseInt(input, 10) - 1;
         if (n >= 0 && n < STRATEGIES.length) { strategyIdx = n; break; }
         console.log(`  Please enter a number between 1 and ${STRATEGIES.length}`);
