@@ -556,11 +556,33 @@ program
   .option("--verbose", "Show masking details (what was replaced) before each send")
   .option("--no-mask", "Disable masking — pass prompts through unmodified")
   .action(async (opts: { model?: string; verbose?: boolean; mask: boolean }) => {
-    // ── Check that `claude` CLI is available in PATH ───────────────────────
-    const claudeCheck = spawnSync("claude", ["--version"], {
+    // ── Resolve how to invoke the claude CLI without shell: true ──────────
+    // On Windows, npm installs CLIs as .cmd batch files that Node cannot
+    // spawn directly without shell: true.  Instead we run the underlying
+    // Node script via the current node binary — same as what the shim does.
+    function resolveClaudeInvocation(): { bin: string; scriptPrefix: string[] } {
+      if (process.platform !== "win32") {
+        return { bin: "claude", scriptPrefix: [] };
+      }
+      // Derive the npm global node_modules path from %APPDATA%\npm
+      const appData = process.env["APPDATA"];
+      if (appData) {
+        const cliScript = path.join(
+          appData, "npm", "node_modules", "@anthropic-ai", "claude-code", "cli.js"
+        );
+        if (fs.existsSync(cliScript)) {
+          return { bin: process.execPath, scriptPrefix: [cliScript] };
+        }
+      }
+      // Fallback: user may have claude installed elsewhere — caller will surface the error
+      return { bin: "claude", scriptPrefix: [] };
+    }
+
+    const { bin: claudeBin, scriptPrefix } = resolveClaudeInvocation();
+
+    const claudeCheck = spawnSync(claudeBin, [...scriptPrefix, "--version"], {
       encoding: "utf-8",
       stdio: "pipe",
-      shell: process.platform === "win32",
     });
     if (claudeCheck.error || (claudeCheck.status !== 0 && claudeCheck.status !== null)) {
       console.error(
@@ -678,13 +700,13 @@ program
       // ── Spawn `claude --print <masked prompt>` ─────────────────────────
       process.stdout.write(`${C.bold}${C.green}Claude: ${C.reset}`);
 
-      const claudeArgs = ["--print", maskedPrompt];
+      const claudeArgs = [...scriptPrefix, "--print", maskedPrompt];
       if (opts.model) claudeArgs.push("--model", opts.model);
 
-      const claudeProc = spawnSync("claude", claudeArgs, {
+      const claudeProc = spawnSync(claudeBin, claudeArgs, {
         encoding:  "utf-8",
         maxBuffer: 10 * 1024 * 1024, // 10 MB
-        shell:     process.platform === "win32",
+        stdio:     ["pipe", "pipe", "pipe"],
       });
 
       if (claudeProc.error) {
