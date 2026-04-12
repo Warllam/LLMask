@@ -703,10 +703,20 @@ program
       const claudeArgs = [...scriptPrefix, "--print", maskedPrompt];
       if (opts.model) claudeArgs.push("--model", opts.model);
 
+      // Strip Claude Code Desktop env vars that prevent a subprocess claude
+      // from making its own API calls (CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST
+      // tells the CLI the provider is supplied by the host app via IPC, so
+      // it won't attempt direct Anthropic API calls).
+      const subEnv: NodeJS.ProcessEnv = { ...process.env };
+      delete subEnv["CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST"];
+      delete subEnv["CLAUDE_CODE_ENTRYPOINT"];
+      delete subEnv["CLAUDECODE"];
+
       const claudeProc = spawnSync(claudeBin, claudeArgs, {
         encoding:  "utf-8",
         maxBuffer: 10 * 1024 * 1024, // 10 MB
         stdio:     ["pipe", "pipe", "pipe"],
+        env:       subEnv,
       });
 
       if (claudeProc.error) {
@@ -716,8 +726,10 @@ program
         return loop();
       }
       if (claudeProc.status !== 0) {
-        const errMsg = ((claudeProc.stderr as string) ?? "").trim() || `exit code ${claudeProc.status}`;
-        console.error(`\n${C.yellow}Claude error:${C.reset} ${errMsg}`);
+        const rawStderr = ((claudeProc.stderr as string) ?? "").trim();
+        const rawStdout = ((claudeProc.stdout as string) ?? "").trim();
+        const errMsg    = rawStderr || rawStdout || `exit code ${claudeProc.status}`;
+        console.error(`\n${C.yellow}Claude exited ${claudeProc.status}:${C.reset} ${errMsg}`);
         return loop();
       }
 
