@@ -4,7 +4,7 @@ import readline from "node:readline";
 import fs from "node:fs";
 import path from "node:path";
 import http from "node:http";
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { findConfigPath, loadProjectConfig, writeProjectConfig } from "./llmaskrc";
 
 // ─── Provider & strategy metadata ─────────────────────────────────────────────
@@ -545,6 +545,186 @@ authCmd
     console.log(`  OPENAI_AUTH_MODE=oauth_codex`);
     console.log(`  OPENAI_OAUTH_TOKEN_PATH=${tokenPath}`);
     console.log("\nThen restart LLMask: llmask start\n");
+  });
+
+// ─── chat ─────────────────────────────────────────────────────────────────────
+
+program
+  .command("chat")
+  .description("Interactive privacy-preserving chat — masks prompts before sending to Claude CLI")
+  .option("--model <model>", "Claude model to use (passed to claude --model, e.g. claude-opus-4-5)")
+  .option("--verbose", "Show masking details (what was replaced) before each send")
+  .option("--no-mask", "Disable masking — pass prompts through unmodified")
+  .action(async (opts: { model?: string; verbose?: boolean; mask: boolean }) => {
+    // ── Check that `claude` CLI is available in PATH ───────────────────────
+    const claudeCheck = spawnSync("claude", ["--version"], {
+      encoding: "utf-8",
+      stdio: "pipe",
+      shell: process.platform === "win32",
+    });
+    if (claudeCheck.error || (claudeCheck.status !== 0 && claudeCheck.status !== null)) {
+      console.error(
+        "\nError: `claude` CLI not found in PATH.\n" +
+          "Install it:       npm install -g @anthropic-ai/claude-code\n" +
+          "Then sign in:     claude login\n"
+      );
+      process.exit(1);
+    }
+
+    // ── ANSI colour helpers ────────────────────────────────────────────────
+    const C = {
+      reset:   "\x1b[0m",
+      bold:    "\x1b[1m",
+      cyan:    "\x1b[36m",
+      yellow:  "\x1b[33m",
+      green:   "\x1b[32m",
+      magenta: "\x1b[35m",
+      gray:    "\x1b[90m",
+    };
+
+    // ── Lazy-load masking modules (keeps other commands fast to start) ─────
+    type DetectionEngineType   = import("../modules/detection/detection-engine").DetectionEngine;
+    type RewriteEngineType     = import("../modules/rewrite/rewrite-engine-v4").RewriteEngineV4;
+    type RemapEngineType       = import("../modules/remap/response-remap-engine").ResponseRemapEngine;
+    type InMemoryStoreType     = import("../modules/mapping-store/in-memory-mapping-store").InMemoryMappingStore;
+
+    let detectionEngine: DetectionEngineType | null = null;
+    let rewriteEngine:   RewriteEngineType   | null = null;
+    let remapEngine:     RemapEngineType     | null = null;
+    let mappingStore:    InMemoryStoreType   | null = null;
+
+    // One stable scope ID for the whole session — pseudonyms stay consistent
+    const scopeId = `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    if (opts.mask) {
+      const { DetectionEngine }  = await import("../modules/detection/detection-engine");
+      const { RewriteEngineV4 }  = await import("../modules/rewrite/rewrite-engine-v4");
+      const { ResponseRemapEngine } = await import("../modules/remap/response-remap-engine");
+      const { InMemoryMappingStore } = await import("../modules/mapping-store/in-memory-mapping-store");
+
+      mappingStore    = new InMemoryMappingStore();
+      mappingStore.initialize();
+      detectionEngine = new DetectionEngine();
+      rewriteEngine   = new RewriteEngineV4(mappingStore);
+      remapEngine     = new ResponseRemapEngine(mappingStore);
+    }
+
+    // ── Welcome banner ─────────────────────────────────────────────────────
+    console.log();
+    console.log(
+      `${C.bold}LLMask Chat${C.reset}` +
+        (opts.mask
+          ? " — prompts are masked before reaching Claude"
+          : ` ${C.yellow}[masking disabled]${C.reset}`)
+    );
+    if (opts.verbose && opts.mask) {
+      console.log(`${C.gray}Verbose: masking details shown per turn${C.reset}`);
+    }
+    if (opts.model) {
+      console.log(`${C.gray}Model: ${opts.model}${C.reset}`);
+    }
+    console.log(`${C.gray}Press Ctrl+C to exit.${C.reset}`);
+    console.log();
+
+    // ── Readline interface ─────────────────────────────────────────────────
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+    rl.on("SIGINT", () => {
+      console.log("\nGoodbye!\n");
+      rl.close();
+      process.exit(0);
+    });
+
+    // ── Main chat loop ─────────────────────────────────────────────────────
+    const loop = async (): Promise<void> => {
+      let userInput: string;
+      try {
+        userInput = await ask(rl, `${C.bold}${C.cyan}You: ${C.reset}`);
+      } catch {
+        return; // readline was closed
+      }
+
+      const trimmed = userInput.trim();
+      if (!trimmed) return loop();
+
+      // ── Mask the prompt ────────────────────────────────────────────────
+      let maskedPrompt = trimmed;
+      if (opts.mask && detectionEngine && rewriteEngine && mappingStore) {
+        const detection = detectionEngine.detect(trimmed);
+        const result    = rewriteEngine.rewriteUnknownPayload(trimmed, detection, { scopeId });
+
+        if (typeof result.rewrittenPayload === "string") {
+          maskedPrompt = result.rewrittenPayload;
+        }
+
+        if (opts.verbose) {
+          const newEntries = result.newEntries ?? [];
+          if (newEntries.length > 0) {
+            const pairs = newEntries
+              .map((e) => `${e.originalValue} ${C.gray}→${C.reset} ${C.yellow}${e.pseudonym}${C.reset}`)
+              .join(", ");
+            console.log(`${C.magenta}[Masked: ${pairs}]${C.reset}`);
+          } else if (result.transformedCount > 0) {
+            // Existing mappings were reused — show all current scope mappings
+            const all   = mappingStore.listMappings(scopeId);
+            const pairs = all
+              .map((e) => `${e.originalValue} ${C.gray}→${C.reset} ${C.yellow}${e.pseudonym}${C.reset}`)
+              .join(", ");
+            if (pairs) console.log(`${C.magenta}[Used mappings: ${pairs}]${C.reset}`);
+          }
+        }
+      }
+
+      // ── Spawn `claude --print <masked prompt>` ─────────────────────────
+      process.stdout.write(`${C.bold}${C.green}Claude: ${C.reset}`);
+
+      const claudeArgs = ["--print", maskedPrompt];
+      if (opts.model) claudeArgs.push("--model", opts.model);
+
+      const claudeProc = spawnSync("claude", claudeArgs, {
+        encoding:  "utf-8",
+        maxBuffer: 10 * 1024 * 1024, // 10 MB
+        shell:     process.platform === "win32",
+      });
+
+      if (claudeProc.error) {
+        console.error(
+          `\n${C.yellow}Failed to run claude:${C.reset} ${(claudeProc.error as Error).message}`
+        );
+        return loop();
+      }
+      if (claudeProc.status !== 0) {
+        const errMsg = ((claudeProc.stderr as string) ?? "").trim() || `exit code ${claudeProc.status}`;
+        console.error(`\n${C.yellow}Claude error:${C.reset} ${errMsg}`);
+        return loop();
+      }
+
+      const rawResponse = ((claudeProc.stdout as string) ?? "").trim();
+
+      // ── Reverse-map pseudonyms back to original values ─────────────────
+      let finalResponse = rawResponse;
+      if (opts.mask && remapEngine) {
+        const remapped = remapEngine.remapJsonResponse(rawResponse, scopeId);
+        if (typeof remapped === "string") finalResponse = remapped;
+      }
+
+      console.log(finalResponse);
+      console.log();
+
+      return loop();
+    };
+
+    try {
+      await loop();
+    } catch (err: unknown) {
+      const e = err as NodeJS.ErrnoException;
+      if (e.code !== "ERR_USE_AFTER_CLOSE") {
+        console.error("Chat error:", e.message);
+        process.exit(1);
+      }
+    } finally {
+      rl.close();
+    }
   });
 
 program.parse();
