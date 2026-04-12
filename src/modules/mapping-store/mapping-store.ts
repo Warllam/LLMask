@@ -154,6 +154,32 @@ export type ExportData = {
   gdprEvents: GdprEvent[];
 };
 
+// ── Code Session Types ────────────────────────────────────────────────────────
+
+/** Summary of a `llmask code` CLI session. */
+export type CodeSessionSummary = {
+  sessionId: string;
+  projectName: string;
+  projectDir: string;
+  strategy: string;
+  model: string;
+  turnsCount: number;
+  totalElementsMasked: number;
+  startedAt: string;
+  lastTurnAt: string;
+};
+
+/** A single turn in a `llmask code` CLI session. */
+export type CodeSessionTurn = {
+  id: number;
+  sessionId: string;
+  prompt: string;
+  response: string;
+  filesScanned: string[];
+  elementsMasked: number;
+  createdAt: string;
+};
+
 export interface MappingStore {
   initialize(): void;
   listMappings(scopeId: string): MappingEntry[];
@@ -181,4 +207,22 @@ export interface MappingStore {
   deleteOlderThan(days: number): RetentionResult;
   eraseBySearchTerm(term: string): EraseResult;
   exportAll(retentionDays: number): ExportData;
+
+  // ── Code Sessions (llmask code CLI agent) ─────────────────────────────────
+  insertCodeSession(info: {
+    sessionId: string;
+    projectDir: string;
+    projectName: string;
+    strategy: string;
+    model: string;
+  }): void;
+  insertCodeSessionTurn(turn: {
+    sessionId: string;
+    prompt: string;
+    response: string;
+    filesScanned: string[];
+    elementsMasked: number;
+  }): void;
+  listCodeSessions(limit: number): CodeSessionSummary[];
+  getCodeSessionTurns(sessionId: string): CodeSessionTurn[];
 }

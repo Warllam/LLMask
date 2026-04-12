@@ -13,6 +13,8 @@ import type {
   RetentionResult,
   EraseResult,
   ExportData,
+  CodeSessionSummary,
+  CodeSessionTurn,
 } from "./mapping-store";
 
 /**
@@ -200,5 +202,35 @@ export class InMemoryMappingStore implements MappingStore {
       requests: [],
       gdprEvents: [],
     };
+  }
+
+  // ── Code Sessions (stubs — no persistence for in-memory store) ───────────
+
+  insertCodeSession(_info: {
+    sessionId: string;
+    projectDir: string;
+    projectName: string;
+    strategy: string;
+    model: string;
+  }): void {
+    // No-op
+  }
+
+  insertCodeSessionTurn(_turn: {
+    sessionId: string;
+    prompt: string;
+    response: string;
+    filesScanned: string[];
+    elementsMasked: number;
+  }): void {
+    // No-op
+  }
+
+  listCodeSessions(_limit: number): CodeSessionSummary[] {
+    return [];
+  }
+
+  getCodeSessionTurns(_sessionId: string): CodeSessionTurn[] {
+    return [];
   }
 }

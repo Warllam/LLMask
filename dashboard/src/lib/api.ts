@@ -20,6 +20,8 @@ import type {
   TestRuleResult,
   ProvidersResponse,
   ModelInfo,
+  CodeSessionSummary,
+  CodeSessionTurn,
 } from "./types";
 import { authStore } from "./auth";
 
@@ -231,6 +233,12 @@ export const api = {
     }
     return res.json() as Promise<TestRuleResult>;
   },
+
+  // ── Code Sessions (llmask code CLI agent) ─────────────────────────────────
+  codeSessions: (limit = 50) =>
+    fetchJson<CodeSessionSummary[]>(`/code-sessions?limit=${limit}`),
+  codeSessionTurns: (sessionId: string) =>
+    fetchJson<CodeSessionTurn[]>(`/code-sessions/${encodeURIComponent(sessionId)}/turns`),
 
   // ── Providers ─────────────────────────────────────────────────────────────
   providers: () => fetchJson<ProvidersResponse>("/providers"),

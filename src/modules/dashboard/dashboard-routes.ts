@@ -533,6 +533,61 @@ export function registerDashboardRoutes(
     }
   );
 
+  // ---- Code Sessions API (llmask code CLI agent) ----
+
+  /**
+   * POST /dashboard/api/code-sessions/report
+   * Called by `llmask code` after each turn to persist session data.
+   * Silently ignores unknown fields; fails gracefully.
+   */
+  server.post(
+    "/dashboard/api/code-sessions/report",
+    async (request, reply) => {
+      const body = request.body as Record<string, unknown>;
+      const sessionId = typeof body?.sessionId === "string" ? body.sessionId : null;
+      if (!sessionId) {
+        return reply.code(400).send({ error: "sessionId is required" });
+      }
+      try {
+        mappingStore.insertCodeSession({
+          sessionId,
+          projectDir:  typeof body.projectDir  === "string" ? body.projectDir  : "unknown",
+          projectName: typeof body.projectName === "string" ? body.projectName : "unknown",
+          strategy:    typeof body.strategy    === "string" ? body.strategy    : "code-aware",
+          model:       typeof body.model       === "string" ? body.model       : "unknown",
+        });
+        mappingStore.insertCodeSessionTurn({
+          sessionId,
+          prompt:        typeof body.prompt   === "string" ? body.prompt   : "",
+          response:      typeof body.response === "string" ? body.response : "",
+          filesScanned:  Array.isArray(body.filesScanned) ? (body.filesScanned as string[]) : [],
+          elementsMasked: typeof body.elementsMasked === "number" ? body.elementsMasked : 0,
+        });
+        return { ok: true };
+      } catch (err) {
+        server.log.warn({ err }, "Failed to store code session report");
+        return reply.code(500).send({ error: "Failed to store report" });
+      }
+    }
+  );
+
+  /** GET /dashboard/api/code-sessions — list code CLI sessions */
+  server.get<{ Querystring: { limit?: string } }>(
+    "/dashboard/api/code-sessions",
+    async (request) => {
+      const limit = Math.min(parseInt(request.query.limit ?? "50", 10) || 50, 500);
+      return mappingStore.listCodeSessions(limit);
+    }
+  );
+
+  /** GET /dashboard/api/code-sessions/:sessionId/turns — conversation turns for a session */
+  server.get<{ Params: { sessionId: string } }>(
+    "/dashboard/api/code-sessions/:sessionId/turns",
+    async (request) => {
+      return mappingStore.getCodeSessionTurns(request.params.sessionId);
+    }
+  );
+
   // ---- Custom Rules API ----
 
   server.get("/dashboard/api/rules", async () => {

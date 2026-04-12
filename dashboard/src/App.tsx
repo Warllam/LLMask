@@ -20,6 +20,7 @@ const GdprCompliance = lazy(() => import("@/components/views/GdprCompliance").th
 const Settings = lazy(() => import("@/components/views/Settings").then((m) => ({ default: m.Settings })));
 const RequestLog = lazy(() => import("@/components/views/RequestLog").then((m) => ({ default: m.RequestLog })));
 const CustomRules = lazy(() => import("@/components/views/CustomRules").then((m) => ({ default: m.CustomRules })));
+const Sessions = lazy(() => import("@/components/views/Sessions").then((m) => ({ default: m.Sessions })));
 
 function ViewFallback() {
   return (
@@ -89,6 +90,9 @@ export function App() {
       } else if (hash === "custom-rules") {
         setCurrentView("custom-rules");
         setSelectedSession(null);
+      } else if (hash === "sessions") {
+        setCurrentView("sessions");
+        setSelectedSession(null);
       } else if (hash === "chat") {
         setChatSessionId(null);
         setCurrentView("chat");
@@ -136,6 +140,8 @@ export function App() {
       window.location.hash = "requestlog";
     } else if (view === "custom-rules") {
       window.location.hash = "custom-rules";
+    } else if (view === "sessions") {
+      window.location.hash = "sessions";
     } else {
       window.location.hash = "";
     }
@@ -247,6 +253,7 @@ export function App() {
               {currentView === "settings" && <Settings />}
               {currentView === "requestlog" && <RequestLog />}
               {currentView === "custom-rules" && <CustomRules />}
+              {currentView === "sessions" && <Sessions />}
               {currentView === "chat" && <Chat sessionId={chatSessionId} onSessionUpdate={refreshSessions} />}
             </Suspense>
             </ErrorBoundary>
