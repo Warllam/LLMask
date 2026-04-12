@@ -1,0 +1,56 @@
+production:
+  primary:
+    adapter: postgresql
+    host: db-primary.nextera-internal.com
+    port: 5432
+    database: nextera_analytics
+    username: analytics_user
+    password: "An@lytics#Pr0d!2024Nextera"
+    pool: 10
+    timeout: 30000
+    ssl_mode: require
+    ssl_cert: /etc/ssl/nextera/client-cert.pem
+
+  replica:
+    adapter: postgresql
+    host: db-replica-1.nextera-internal.com
+    port: 5432
+    database: nextera_analytics
+    username: analytics_readonly
+    password: "Re@dOnly!Repl1ca#Nextera2024"
+    pool: 5
+    ssl_mode: require
+
+  warehouse:
+    adapter: redshift
+    host: nextera-dw.cluster-abcdef123456.eu-west-1.redshift.amazonaws.com
+    port: 5439
+    database: nextera_warehouse
+    username: dw_admin
+    password: "DW@dm1n!P@ss#2024Nextera_W@rehouse"
+    s3_staging_bucket: s3://nextera-redshift-staging/
+    iam_role: arn:aws:iam::123456789012:role/nextera-redshift-s3-role
+
+  mongodb:
+    uri: "mongodb://mongo_admin:M0ng0!S3cr3t@mongo.nextera-internal.com:27017/nextera_events?authSource=admin"
+    replica_set: nextera-rs0
+
+  elasticsearch:
+    hosts:
+      - https://elastic.nextera-internal.com:9200
+    username: elastic_nextera
+    password: "3l@st1c!Search#Nextera2024"
+    index_prefix: nextera_
+
+staging:
+  primary:
+    adapter: postgresql
+    host: db-staging.nextera-internal.com
+    port: 5432
+    database: nextera_analytics_staging
+    username: staging_user
+    password: "St@g1ng!P@ss#Nextera2024"
+    pool: 3
+
+  mongodb:
+    uri: "mongodb://staging_user:St@g1ngMongo!@mongo-staging.nextera-internal.com:27017/nextera_events_staging"
