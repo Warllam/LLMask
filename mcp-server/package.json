@@ -1,0 +1,21 @@
+{
+  "name": "llmask-mcp",
+  "version": "0.1.0",
+  "description": "Privacy masking MCP server for Claude — mask sensitive data before it leaves your machine",
+  "main": "dist/index.js",
+  "bin": { "llmask-mcp": "./dist/index.js" },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts"
+  },
+  "keywords": ["mcp", "privacy", "masking", "claude", "llm"],
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
